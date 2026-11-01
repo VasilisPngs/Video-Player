@@ -27,6 +27,7 @@ env:
   FFMPEG_DECODERS: truehd dca
   NDK_VERSION: 30.0.16248370
   CMAKE_VERSION: 4.1.2
+  MEDIA3_JAVA_VERSION: 26
   MIN_SDK: 34
 
 jobs:
@@ -44,7 +45,7 @@ jobs:
         uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: ${{ env.MEDIA3_JAVA_VERSION }}
 
       - name: Set up JDK
         uses: actions/setup-java@v6
@@ -70,14 +71,15 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: app/libs
-          key: ffmpeg-${{ steps.media3.outputs.version }}-${{ env.FFMPEG_BRANCH }}-${{ env.NDK_VERSION }}-${{ hashFiles('.github/scripts/build-ffmpeg.sh') }}-${{ env.FFMPEG_DECODERS }}
+          key: ffmpeg-${{ steps.media3.outputs.version }}-${{ env.FFMPEG_BRANCH }}-${{ env.NDK_VERSION }}-${{ env.CMAKE_VERSION }}-${{ env.MEDIA3_JAVA_VERSION }}-${{ hashFiles('.github/scripts/build-ffmpeg.sh') }}-${{ env.FFMPEG_DECODERS }}
 
       - name: Build FFmpeg audio decoders
         if: steps.ffmpeg.outputs.cache-hit != 'true'
         env:
           MEDIA3_JAVA_HOME: ${{ steps.media3-jdk.outputs.path }}
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "cmake;$CMAKE_VERSION" > /dev/null
+          curl -fsSL https://dl.google.com/android/cli/latest/linux_x86_64/install.sh | bash > /dev/null
+          "$HOME/.local/bin/android" sdk install --no-metrics --sdk="$ANDROID_HOME" "ndk/$NDK_VERSION" "cmake/$CMAKE_VERSION" > /dev/null
           .github/scripts/build-ffmpeg.sh
 
       - name: Save FFmpeg audio decoders
