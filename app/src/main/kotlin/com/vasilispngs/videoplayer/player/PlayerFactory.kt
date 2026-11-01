@@ -5,6 +5,7 @@ package com.vasilispngs.videoplayer.player
 import android.content.Context
 import android.media.MediaCodecInfo.CodecProfileLevel
 import android.net.Uri
+import android.os.Handler
 import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
@@ -19,10 +20,12 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.ForwardingRenderer
 import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.exoplayer.text.TextRenderer
+import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorOutput
@@ -67,6 +70,28 @@ private class PlayerRenderersFactory(context: Context, private val delay: Subtit
     init {
         setExtensionRendererMode(EXTENSION_RENDERER_MODE_ON)
         setEnableDecoderFallback(true)
+    }
+
+    override fun buildVideoRenderers(
+        context: Context,
+        extensionRendererMode: Int,
+        mediaCodecSelector: MediaCodecSelector,
+        enableDecoderFallback: Boolean,
+        eventHandler: Handler,
+        eventListener: VideoRendererEventListener,
+        allowedVideoJoiningTimeMs: Long,
+        out: ArrayList<Renderer>
+    ) {
+        super.buildVideoRenderers(
+            context,
+            EXTENSION_RENDERER_MODE_OFF,
+            mediaCodecSelector,
+            enableDecoderFallback,
+            eventHandler,
+            eventListener,
+            allowedVideoJoiningTimeMs,
+            out
+        )
     }
 
     override fun buildTextRenderers(

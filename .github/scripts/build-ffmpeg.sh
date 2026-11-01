@@ -19,6 +19,7 @@ PY
 cat >> "$module/build.gradle.kts" <<KTS
 
 android.ndkVersion = "$NDK_VERSION"
+android.defaultConfig.minSdk = $MIN_SDK
 android.defaultConfig.ndk.abiFilters += setOf("arm64-v8a", "armeabi-v7a")
 KTS
 
@@ -28,4 +29,4 @@ KTS
 (cd "$work" && JAVA_HOME="$MEDIA3_JAVA_HOME" ./gradlew --no-daemon --quiet :lib-decoder-ffmpeg:assembleRelease)
 
 mkdir -p app/libs
-cp "$module/build/outputs/aar/lib-decoder-ffmpeg-release.aar" app/libs/
+cp "$module/buildout/outputs/aar/lib-decoder-ffmpeg-release.aar" app/libs/
