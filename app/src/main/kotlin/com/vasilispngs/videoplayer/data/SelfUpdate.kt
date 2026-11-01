@@ -1,0 +1,9 @@
+package com.vasilispngs.videoplayer.data
+
+sealed interface SelfUpdate {
+    data object Idle : SelfUpdate
+    data object Available : SelfUpdate
+    data class Downloading(val progress: Float) : SelfUpdate
+    data object Installing : SelfUpdate
+    data class Failed(val code: ErrorCode?) : SelfUpdate
+}

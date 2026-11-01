@@ -1,0 +1,78 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="el">
+    <string name="app_name" translatable="false">Video Player</string>
+    <string name="home">Αρχική</string>
+    <string name="settings">Ρυθμίσεις</string>
+    <string name="back">Πίσω</string>
+    <string name="save">Αποθήκευση</string>
+    <string name="cancel">Ακύρωση</string>
+    <string name="remove">Κατάργηση</string>
+    <string name="continue_watching">Συνέχεια παρακολούθησης</string>
+    <plurals name="minutes_left">
+        <item quantity="one">Απομένει %1$d λεπτό</item>
+        <item quantity="other">Απομένουν %1$d λεπτά</item>
+    </plurals>
+    <string name="sources">Πηγές</string>
+    <string name="all_files_access">Πρόσβαση σε όλα τα αρχεία</string>
+    <string name="all_files_access_description">Χρειάζεται για τα αρχεία του USB. Από τον υπολογιστή: %1$s</string>
+    <string name="all_files_access_command" translatable="false" tools:ignore="TypographyDashes">adb shell appops set --uid %1$s MANAGE_EXTERNAL_STORAGE allow</string>
+    <string name="add_computer">Προσθήκη υπολογιστή</string>
+    <string name="computer_address">Υπολογιστής</string>
+    <string name="computer_address_example" translatable="false">192.168.1.10</string>
+    <string name="computer_share">Κοινόχρηστος φάκελος</string>
+    <string name="computer_user">Όνομα χρήστη</string>
+    <string name="computer_password">Κωδικός πρόσβασης</string>
+    <string name="computer_connecting">Σύνδεση…</string>
+    <string name="computer_failed">Δεν ήταν δυνατή η σύνδεση</string>
+    <string name="remove_computer">Να καταργηθεί ο υπολογιστής;</string>
+    <string name="folder_empty">Ο φάκελος είναι κενός</string>
+    <string name="folder_failed">Δεν ήταν δυνατό το άνοιγμα του φακέλου</string>
+    <string name="playback">Αναπαραγωγή</string>
+    <string name="audio_language">Γλώσσα ήχου</string>
+    <string name="audio_language_first">Πρώτο κανάλι (αρχική γλώσσα)</string>
+    <string name="subtitle_language">Γλώσσα υπότιτλων</string>
+    <string name="subtitle_size">Μέγεθος υπότιτλων</string>
+    <string name="subtitle_position">Θέση υπότιτλων</string>
+    <string name="language_greek">Ελληνικά</string>
+    <string name="language_english">Αγγλικά</string>
+    <string name="subtitles_off">Κανένας</string>
+    <string name="size_very_small">Πολύ μικρό</string>
+    <string name="size_small">Μικρό</string>
+    <string name="size_medium">Μέτριο</string>
+    <string name="size_large">Μεγάλο</string>
+    <string name="size_very_large">Πολύ μεγάλο</string>
+    <string name="position_very_low">Πολύ χαμηλά</string>
+    <string name="position_low">Χαμηλά</string>
+    <string name="position_higher">Ψηλότερα</string>
+    <string name="position_very_high">Πολύ ψηλά</string>
+    <string name="appearance">Εμφάνιση</string>
+    <string name="theme">Θέμα</string>
+    <string name="theme_system">Προεπιλογή συστήματος</string>
+    <string name="theme_light">Ανοιχτόχρωμο</string>
+    <string name="theme_dark">Σκούρο</string>
+    <string name="updates">Ενημερώσεις</string>
+    <string name="self_update_available">Διαθέσιμη ενημέρωση</string>
+    <string name="self_update_install">Λήψη και εγκατάσταση</string>
+    <string name="self_update_downloading">Λήψη • %1$d%%</string>
+    <string name="self_update_installing">Εγκατάσταση…</string>
+    <string name="self_update_failed">Δεν ήταν δυνατή η ενημέρωση. Δοκιμάστε ξανά.</string>
+    <string name="app_updated">Η εφαρμογή ενημερώθηκε</string>
+    <string name="play">Αναπαραγωγή</string>
+    <string name="pause">Παύση</string>
+    <string name="rewind">Πίσω 10 δευτερόλεπτα</string>
+    <string name="fast_forward">Μπροστά 10 δευτερόλεπτα</string>
+    <string name="audio">Ήχος</string>
+    <string name="subtitles">Υπότιτλοι</string>
+    <string name="subtitle_sync">Συγχρονισμός υπότιτλων</string>
+    <string name="subtitle_sync_value">%1$+.1f δευτ.</string>
+    <string name="subtitle_sync_earlier">Νωρίτερα</string>
+    <string name="subtitle_sync_later">Αργότερα</string>
+    <string name="next_video">Επόμενο</string>
+    <plurals name="next_video_in">
+        <item quantity="one">Ξεκινά σε %1$d δευτερόλεπτο</item>
+        <item quantity="other">Ξεκινά σε %1$d δευτερόλεπτα</item>
+    </plurals>
+    <string name="track_label" translatable="false">%1$s · %2$s</string>
+    <string name="playback_failed">Δεν ήταν δυνατή η αναπαραγωγή</string>
+    <string name="error_with_code">%1$s (%2$s)</string>
+    <string name="error_code_http" translatable="false">HTTP %1$d</string>
+</resources>

@@ -1,0 +1,39 @@
+name: Media3
+
+on:
+  schedule:
+    - cron: '37 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+  issues: read
+
+jobs:
+  check:
+    name: Check for a newer Media3
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build with a newer Media3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          current="$(grep -oP '^media3 = "\K[^"]+' gradle/libs.versions.toml)"
+          newest="$(curl -fsSL https://dl.google.com/android/maven2/androidx/media3/media3-exoplayer/maven-metadata.xml \
+            | grep -oP '<version>\K[^<]+' | python3 .github/scripts/newest-version.py "$current")"
+          if [ -z "$newest" ]; then
+            echo "Media3 $current is the newest"
+            exit 0
+          fi
+          if [ -n "$(gh issue list --repo "$REPO" --state open --search "\"Media3 $newest failed\" in:title" --json number --jq '.[].number')" ]; then
+            echo "Media3 $newest already failed"
+            exit 0
+          fi
+          gh workflow run release.yml --repo "$REPO" --ref main -f media3="$newest"

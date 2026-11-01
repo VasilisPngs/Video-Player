@@ -1,0 +1,174 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.claude/**'
+  workflow_dispatch:
+    inputs:
+      media3:
+        description: Media3 version to build with
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  FFMPEG_BRANCH: release/6.0
+  FFMPEG_DECODERS: truehd dca
+  NDK_VERSION: 30.0.16248370
+  CMAKE_VERSION: 4.1.2
+  MIN_SDK: 34
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up JDK for Media3
+        id: media3-jdk
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '27'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Use the requested Media3 version
+        if: inputs.media3 != ''
+        env:
+          MEDIA3: ${{ inputs.media3 }}
+        run: sed -i -E "s/^media3 = \"[^\"]+\"/media3 = \"$MEDIA3\"/" gradle/libs.versions.toml
+
+      - name: Find Media3 version
+        id: media3
+        run: echo "version=$(grep -oP '^media3 = "\K[^"]+' gradle/libs.versions.toml)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore FFmpeg audio decoders
+        id: ffmpeg
+        uses: actions/cache/restore@v6
+        with:
+          path: app/libs
+          key: ffmpeg-${{ steps.media3.outputs.version }}-${{ env.FFMPEG_BRANCH }}-${{ env.NDK_VERSION }}-${{ hashFiles('.github/scripts/build-ffmpeg.sh') }}-${{ env.FFMPEG_DECODERS }}
+
+      - name: Build FFmpeg audio decoders
+        if: steps.ffmpeg.outputs.cache-hit != 'true'
+        env:
+          MEDIA3_JAVA_HOME: ${{ steps.media3-jdk.outputs.path }}
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "cmake;$CMAKE_VERSION" > /dev/null
+          .github/scripts/build-ffmpeg.sh
+
+      - name: Save FFmpeg audio decoders
+        if: steps.ffmpeg.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: app/libs
+          key: ${{ steps.ffmpeg.outputs.cache-primary-key }}
+
+      - name: Prepare release keystore
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -in release.keystore.enc \
+            -out release.keystore \
+            -k "$ANDROID_KEYSTORE_PASSWORD"
+          test -s release.keystore
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Lint and test
+        run: ./gradlew :app:lintRelease :app:testDebugUnitTest
+
+      - name: Check accessibility on a device
+        timeout-minutes: 20
+        run: >-
+          ./gradlew :app:pixel10Api37DebugAndroidTest
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Generate Baseline Profile and build release APK
+        timeout-minutes: 25
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: >-
+          ./gradlew :app:generateReleaseBaselineProfile :app:assembleRelease
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Check FFmpeg audio decoders in the APK
+        run: |
+          for abi in arm64-v8a armeabi-v7a; do
+            unzip -l app/build/outputs/apk/release/app-release.apk "lib/$abi/libffmpegJNI.so" > /dev/null
+          done
+
+      - name: Show device test results
+        if: failure()
+        run: |
+          find . -path '*/build/outputs/androidTest-results/*' -name '*.xml' -exec cat {} +
+          find . -path '*/build/*' -name 'logcat-*.txt' -exec tail -n 200 {} +
+
+      - name: Commit the Media3 update
+        if: inputs.media3 != ''
+        env:
+          MEDIA3: ${{ inputs.media3 }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet -am "Update Media3 to $MEDIA3"
+          git push --quiet origin HEAD:main
+
+      - name: Report a failed Media3 update
+        if: failure() && inputs.media3 != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          MEDIA3: ${{ inputs.media3 }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          gh issue create --repo "$REPO"
+          --title "Media3 $MEDIA3 failed"
+          --body "Video Player stays on the last Media3 version that built and passed its checks. Run: $RUN"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG_NAME: Video-Player
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk Video-Player.apk
+          if gh release view "$TAG_NAME" --repo "$REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" Video-Player.apk --repo "$REPO" --clobber
+            gh api --method PATCH "repos/$REPO/git/refs/tags/$TAG_NAME" \
+              -f sha="$(git rev-parse HEAD)" -F force=true --silent
+          else
+            gh release create "$TAG_NAME" Video-Player.apk \
+              --repo "$REPO" \
+              --title "Video Player" \
+              --notes " "
+          fi

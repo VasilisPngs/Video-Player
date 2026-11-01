@@ -1,0 +1,271 @@
+package com.vasilispngs.videoplayer.ui
+
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vasilispngs.videoplayer.R
+import com.vasilispngs.videoplayer.data.AudioLanguage
+import com.vasilispngs.videoplayer.data.PlaybackSettings
+import com.vasilispngs.videoplayer.data.SelfUpdate
+import com.vasilispngs.videoplayer.data.SubtitleLanguage
+import com.vasilispngs.videoplayer.data.SubtitlePosition
+import com.vasilispngs.videoplayer.data.SubtitleSize
+import com.vasilispngs.videoplayer.data.ThemeMode
+import kotlin.math.roundToInt
+
+private enum class Choice { AudioLanguage, SubtitleLanguage, SubtitleSize, SubtitlePosition, Theme }
+
+private const val PLAYBACK_ROWS = 4
+
+@Composable
+fun SettingsScreen(viewModel: HomeViewModel, themeMode: ThemeMode, onBack: () -> Unit) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val selfUpdate by viewModel.selfUpdate.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val activity = LocalActivity.current
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.updateApp() }
+
+    SettingsContent(
+        settings = settings,
+        themeMode = themeMode,
+        selfUpdate = selfUpdate,
+        onBack = onBack,
+        onUpdateApp = {
+            if (askForNotifications(context, activity)) {
+                notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                viewModel.updateApp()
+            }
+        },
+        onAudioLanguage = viewModel::setAudioLanguage,
+        onSubtitleLanguage = viewModel::setSubtitleLanguage,
+        onSubtitleSize = viewModel::setSubtitleSize,
+        onSubtitlePosition = viewModel::setSubtitlePosition,
+        onThemeMode = viewModel::setThemeMode
+    )
+}
+
+@Composable
+internal fun SettingsContent(
+    settings: PlaybackSettings,
+    themeMode: ThemeMode,
+    selfUpdate: SelfUpdate,
+    onBack: () -> Unit,
+    onUpdateApp: () -> Unit,
+    onAudioLanguage: (AudioLanguage) -> Unit,
+    onSubtitleLanguage: (SubtitleLanguage) -> Unit,
+    onSubtitleSize: (SubtitleSize) -> Unit,
+    onSubtitlePosition: (SubtitlePosition) -> Unit,
+    onThemeMode: (ThemeMode) -> Unit
+) {
+    var choice by rememberSaveable { mutableStateOf<Choice?>(null) }
+    val focus = rememberInitialFocus()
+    val listState = rememberLazyListState()
+
+    ListScreen(title = stringResource(R.string.settings), focus = focus, onBack = onBack) { contentPadding, nestedScroll ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(nestedScroll)
+                .focusRequester(focus)
+                .focusRestorer(),
+            contentPadding = contentPadding,
+            verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
+        ) {
+            if (selfUpdate != SelfUpdate.Idle) {
+                item(key = "app-update", contentType = ROW) { AppUpdateItem(status = selfUpdate, onUpdate = onUpdateApp) }
+            }
+
+            item(key = "playback", contentType = HEADER) { SectionHeader(text = stringResource(R.string.playback)) }
+            item(key = "audio-language", contentType = ROW) {
+                ValueItem(R.string.audio_language, stringResource(settings.audioLanguage.labelRes), 0, PLAYBACK_ROWS) { choice = Choice.AudioLanguage }
+            }
+            item(key = "subtitle-language", contentType = ROW) {
+                ValueItem(R.string.subtitle_language, stringResource(settings.subtitleLanguage.labelRes), 1, PLAYBACK_ROWS) { choice = Choice.SubtitleLanguage }
+            }
+            item(key = "subtitle-size", contentType = ROW) {
+                ValueItem(R.string.subtitle_size, stringResource(settings.subtitleSize.labelRes), 2, PLAYBACK_ROWS) { choice = Choice.SubtitleSize }
+            }
+            item(key = "subtitle-position", contentType = ROW) {
+                ValueItem(R.string.subtitle_position, stringResource(settings.subtitlePosition.labelRes), 3, PLAYBACK_ROWS) { choice = Choice.SubtitlePosition }
+            }
+
+            item(key = "appearance", contentType = HEADER) { SectionHeader(text = stringResource(R.string.appearance)) }
+            item(key = "theme", contentType = ROW) {
+                ValueItem(R.string.theme, stringResource(themeMode.labelRes), 0, 1) { choice = Choice.Theme }
+            }
+        }
+    }
+
+    val close = { choice = null }
+    when (choice) {
+        Choice.AudioLanguage -> OptionDialog(
+            title = stringResource(R.string.audio_language),
+            options = AudioLanguage.entries,
+            current = settings.audioLanguage,
+            label = { stringResource(it.labelRes) },
+            onDismiss = close,
+            onSelect = {
+                close()
+                onAudioLanguage(it)
+            }
+        )
+        Choice.SubtitleLanguage -> OptionDialog(
+            title = stringResource(R.string.subtitle_language),
+            options = SubtitleLanguage.entries,
+            current = settings.subtitleLanguage,
+            label = { stringResource(it.labelRes) },
+            onDismiss = close,
+            onSelect = {
+                close()
+                onSubtitleLanguage(it)
+            }
+        )
+        Choice.SubtitleSize -> OptionDialog(
+            title = stringResource(R.string.subtitle_size),
+            options = SubtitleSize.entries,
+            current = settings.subtitleSize,
+            label = { stringResource(it.labelRes) },
+            onDismiss = close,
+            onSelect = {
+                close()
+                onSubtitleSize(it)
+            }
+        )
+        Choice.SubtitlePosition -> OptionDialog(
+            title = stringResource(R.string.subtitle_position),
+            options = SubtitlePosition.entries,
+            current = settings.subtitlePosition,
+            label = { stringResource(it.labelRes) },
+            onDismiss = close,
+            onSelect = {
+                close()
+                onSubtitlePosition(it)
+            }
+        )
+        Choice.Theme -> OptionDialog(
+            title = stringResource(R.string.theme),
+            options = ThemeMode.entries,
+            current = themeMode,
+            label = { stringResource(it.labelRes) },
+            onDismiss = close,
+            onSelect = {
+                close()
+                onThemeMode(it)
+            }
+        )
+        null -> Unit
+    }
+}
+
+@Composable
+private fun ValueItem(@StringRes title: Int, value: String, index: Int, count: Int, onClick: () -> Unit) {
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = ListItemDefaults.segmentedShapes(index, count),
+        colors = listItemColors(),
+        supportingContent = { Text(text = value) }
+    ) {
+        Text(text = stringResource(title))
+    }
+}
+
+@Composable
+private fun AppUpdateItem(status: SelfUpdate, onUpdate: () -> Unit) {
+    val shapes = ListItemDefaults.segmentedShapes(0, 1)
+    val headline = @Composable { Text(text = stringResource(R.string.self_update_available)) }
+    val supporting = @Composable {
+        when (status) {
+            is SelfUpdate.Downloading -> Column {
+                Text(text = stringResource(R.string.self_update_downloading, (status.progress * 100).roundToInt()))
+                LinearWavyProgressIndicator(progress = { status.progress }, modifier = Modifier.fillMaxWidth())
+            }
+            SelfUpdate.Installing -> Column {
+                Text(text = stringResource(R.string.self_update_installing))
+                LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            is SelfUpdate.Failed -> Text(text = stringResource(R.string.self_update_failed).withCode(status.code))
+            else -> Text(text = stringResource(R.string.self_update_install))
+        }
+    }
+    if (status == SelfUpdate.Available || status is SelfUpdate.Failed) {
+        SegmentedListItem(onClick = onUpdate, shapes = shapes, colors = listItemColors(), supportingContent = supporting, content = headline)
+    } else {
+        SegmentedListItem(shapes = shapes, colors = listItemColors(), supportingContent = supporting, content = headline)
+    }
+}
+
+private fun askForNotifications(context: Context, activity: Activity?): Boolean =
+    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+        activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) == false
+
+@get:StringRes
+private val ThemeMode.labelRes: Int
+    get() = when (this) {
+        ThemeMode.System -> R.string.theme_system
+        ThemeMode.Light -> R.string.theme_light
+        ThemeMode.Dark -> R.string.theme_dark
+    }
+
+@get:StringRes
+private val AudioLanguage.labelRes: Int
+    get() = when (this) {
+        AudioLanguage.First -> R.string.audio_language_first
+        AudioLanguage.Greek -> R.string.language_greek
+        AudioLanguage.English -> R.string.language_english
+    }
+
+@get:StringRes
+private val SubtitleLanguage.labelRes: Int
+    get() = when (this) {
+        SubtitleLanguage.Greek -> R.string.language_greek
+        SubtitleLanguage.English -> R.string.language_english
+        SubtitleLanguage.Off -> R.string.subtitles_off
+    }
+
+@get:StringRes
+private val SubtitleSize.labelRes: Int
+    get() = when (this) {
+        SubtitleSize.VerySmall -> R.string.size_very_small
+        SubtitleSize.Small -> R.string.size_small
+        SubtitleSize.Medium -> R.string.size_medium
+        SubtitleSize.Large -> R.string.size_large
+        SubtitleSize.VeryLarge -> R.string.size_very_large
+    }
+
+@get:StringRes
+private val SubtitlePosition.labelRes: Int
+    get() = when (this) {
+        SubtitlePosition.VeryLow -> R.string.position_very_low
+        SubtitlePosition.Low -> R.string.position_low
+        SubtitlePosition.Higher -> R.string.position_higher
+        SubtitlePosition.VeryHigh -> R.string.position_very_high
+    }
