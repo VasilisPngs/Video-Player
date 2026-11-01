@@ -36,9 +36,9 @@ class AppPreferencesTest {
     }
 
     @Test
-    fun `starts with the first audio track, Greek subtitles and Android's medium size`() = runTest {
+    fun `starts with the first audio track, Greek subtitles and the low position`() = runTest {
         assertEquals(
-            PlaybackSettings(AudioLanguage.First, SubtitleLanguage.Greek, SubtitleSize.Medium, SubtitlePosition.Low),
+            PlaybackSettings(AudioLanguage.First, SubtitleLanguage.Greek, SubtitlePosition.Low),
             preferences().playback.first()
         )
     }
@@ -48,11 +48,10 @@ class AppPreferencesTest {
         val preferences = preferences()
         preferences.setAudioLanguage(AudioLanguage.English)
         preferences.setSubtitleLanguage(SubtitleLanguage.Off)
-        preferences.setSubtitleSize(SubtitleSize.VeryLarge)
         preferences.setSubtitlePosition(SubtitlePosition.VeryHigh)
 
         assertEquals(
-            PlaybackSettings(AudioLanguage.English, SubtitleLanguage.Off, SubtitleSize.VeryLarge, SubtitlePosition.VeryHigh),
+            PlaybackSettings(AudioLanguage.English, SubtitleLanguage.Off, SubtitlePosition.VeryHigh),
             preferences.playback.first()
         )
     }

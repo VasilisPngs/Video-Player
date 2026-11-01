@@ -69,13 +69,13 @@ class AccessibilityTest {
                 onUpdateApp = {},
                 onAudioLanguage = {},
                 onSubtitleLanguage = {},
-                onSubtitleSize = {},
+                onCaptionPreferences = {},
                 onSubtitlePosition = {},
                 onThemeMode = {}
             )
         }
         checkLightAndDark()
-        compose.onNodeWithText(string(R.string.subtitle_size)).performClick()
+        compose.onNodeWithText(string(R.string.subtitle_position)).performClick()
         checkLightAndDark()
     }
 

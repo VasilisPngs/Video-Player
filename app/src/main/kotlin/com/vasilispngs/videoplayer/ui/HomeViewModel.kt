@@ -17,7 +17,6 @@ import com.vasilispngs.videoplayer.data.SelfUpdate
 import com.vasilispngs.videoplayer.data.SelfUpdater
 import com.vasilispngs.videoplayer.data.SubtitleLanguage
 import com.vasilispngs.videoplayer.data.SubtitlePosition
-import com.vasilispngs.videoplayer.data.SubtitleSize
 import com.vasilispngs.videoplayer.data.ThemeMode
 import com.vasilispngs.videoplayer.data.Volume
 import kotlinx.coroutines.flow.SharingStarted
@@ -63,10 +62,6 @@ class HomeViewModel(
 
     fun setSubtitleLanguage(value: SubtitleLanguage) {
         viewModelScope.launch { preferences.setSubtitleLanguage(value) }
-    }
-
-    fun setSubtitleSize(value: SubtitleSize) {
-        viewModelScope.launch { preferences.setSubtitleSize(value) }
     }
 
     fun setSubtitlePosition(value: SubtitlePosition) {

@@ -5,6 +5,7 @@ package com.vasilispngs.videoplayer.ui
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.text.format.DateUtils
+import android.view.accessibility.CaptioningManager
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.DrawableRes
 import androidx.annotation.OptIn
@@ -38,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +73,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
+import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.DefaultTrackNameProvider
 import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.SubtitleView
@@ -85,7 +88,6 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.data.ErrorCode
 import com.vasilispngs.videoplayer.data.SubtitlePosition
-import com.vasilispngs.videoplayer.data.SubtitleSize
 import com.vasilispngs.videoplayer.data.fileName
 import com.vasilispngs.videoplayer.player.audio
 import com.vasilispngs.videoplayer.player.buildPlayer
@@ -228,7 +230,7 @@ private fun PlayerContent(player: ExoPlayer, viewModel: PlayerViewModel, onExit:
             player = player,
             modifier = Modifier.fillMaxSize(),
             surfaceType = SURFACE_TYPE_SURFACE_VIEW,
-            subtitles = { Subtitles(player = player, size = settings.subtitleSize, position = settings.subtitlePosition) }
+            subtitles = { Subtitles(player = player, position = settings.subtitlePosition) }
         )
         if (playPause.showBuffering) LoadingIndicator(modifier = Modifier.align(Alignment.Center))
         if (controls) {
@@ -309,9 +311,25 @@ private fun PlayerContent(player: ExoPlayer, viewModel: PlayerViewModel, onExit:
 }
 
 @Composable
-private fun Subtitles(player: Player, size: SubtitleSize, position: SubtitlePosition) {
+private fun Subtitles(player: Player, position: SubtitlePosition) {
     val context = LocalContext.current
-    val view = remember(context) { SubtitleView(context).apply { setUserDefaultStyle() } }
+    val view = remember(context) { SubtitleView(context) }
+    val captioning = remember(context) { context.getSystemService(CaptioningManager::class.java) }
+    var style by remember(captioning) { mutableStateOf(captioning.userStyle) }
+    var scale by remember(captioning) { mutableFloatStateOf(captioning.fontScale) }
+    DisposableEffect(captioning) {
+        val listener = object : CaptioningManager.CaptioningChangeListener() {
+            override fun onUserStyleChanged(userStyle: CaptioningManager.CaptionStyle) {
+                style = userStyle
+            }
+
+            override fun onFontScaleChanged(fontScale: Float) {
+                scale = fontScale
+            }
+        }
+        captioning.addCaptioningChangeListener(listener)
+        onDispose { captioning.removeCaptioningChangeListener(listener) }
+    }
     DisposableEffect(player, view) {
         val listener = object : Player.Listener {
             override fun onCues(cueGroup: CueGroup) {
@@ -326,7 +344,8 @@ private fun Subtitles(player: Player, size: SubtitleSize, position: SubtitlePosi
         factory = { view },
         modifier = Modifier.fillMaxSize(),
         update = {
-            it.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * size.scale)
+            it.setStyle(CaptionStyleCompat.createFromCaptionStyle(style))
+            it.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * scale)
             it.setBottomPaddingFraction(SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION * position.scale)
         }
     )

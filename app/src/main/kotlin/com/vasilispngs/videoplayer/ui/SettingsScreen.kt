@@ -3,7 +3,9 @@ package com.vasilispngs.videoplayer.ui
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,11 +38,10 @@ import com.vasilispngs.videoplayer.data.PlaybackSettings
 import com.vasilispngs.videoplayer.data.SelfUpdate
 import com.vasilispngs.videoplayer.data.SubtitleLanguage
 import com.vasilispngs.videoplayer.data.SubtitlePosition
-import com.vasilispngs.videoplayer.data.SubtitleSize
 import com.vasilispngs.videoplayer.data.ThemeMode
 import kotlin.math.roundToInt
 
-private enum class Choice { AudioLanguage, SubtitleLanguage, SubtitleSize, SubtitlePosition, Theme }
+private enum class Choice { AudioLanguage, SubtitleLanguage, SubtitlePosition, Theme }
 
 private const val PLAYBACK_ROWS = 4
 
@@ -66,7 +67,7 @@ fun SettingsScreen(viewModel: HomeViewModel, themeMode: ThemeMode, onBack: () ->
         },
         onAudioLanguage = viewModel::setAudioLanguage,
         onSubtitleLanguage = viewModel::setSubtitleLanguage,
-        onSubtitleSize = viewModel::setSubtitleSize,
+        onCaptionPreferences = { val _ = runCatching { context.startActivity(Intent(Settings.ACTION_CAPTIONING_SETTINGS)) } },
         onSubtitlePosition = viewModel::setSubtitlePosition,
         onThemeMode = viewModel::setThemeMode
     )
@@ -81,7 +82,7 @@ internal fun SettingsContent(
     onUpdateApp: () -> Unit,
     onAudioLanguage: (AudioLanguage) -> Unit,
     onSubtitleLanguage: (SubtitleLanguage) -> Unit,
-    onSubtitleSize: (SubtitleSize) -> Unit,
+    onCaptionPreferences: () -> Unit,
     onSubtitlePosition: (SubtitlePosition) -> Unit,
     onThemeMode: (ThemeMode) -> Unit
 ) {
@@ -111,8 +112,8 @@ internal fun SettingsContent(
             item(key = "subtitle-language", contentType = ROW) {
                 ValueItem(R.string.subtitle_language, stringResource(settings.subtitleLanguage.labelRes), 1, PLAYBACK_ROWS) { choice = Choice.SubtitleLanguage }
             }
-            item(key = "subtitle-size", contentType = ROW) {
-                ValueItem(R.string.subtitle_size, stringResource(settings.subtitleSize.labelRes), 2, PLAYBACK_ROWS) { choice = Choice.SubtitleSize }
+            item(key = "caption-preferences", contentType = ROW) {
+                ValueItem(R.string.caption_preferences, stringResource(R.string.caption_size_and_style), 2, PLAYBACK_ROWS, onCaptionPreferences)
             }
             item(key = "subtitle-position", contentType = ROW) {
                 ValueItem(R.string.subtitle_position, stringResource(settings.subtitlePosition.labelRes), 3, PLAYBACK_ROWS) { choice = Choice.SubtitlePosition }
@@ -147,17 +148,6 @@ internal fun SettingsContent(
             onSelect = {
                 close()
                 onSubtitleLanguage(it)
-            }
-        )
-        Choice.SubtitleSize -> OptionDialog(
-            title = stringResource(R.string.subtitle_size),
-            options = SubtitleSize.entries,
-            current = settings.subtitleSize,
-            label = { stringResource(it.labelRes) },
-            onDismiss = close,
-            onSelect = {
-                close()
-                onSubtitleSize(it)
             }
         )
         Choice.SubtitlePosition -> OptionDialog(
@@ -249,16 +239,6 @@ private val SubtitleLanguage.labelRes: Int
         SubtitleLanguage.Greek -> R.string.language_greek
         SubtitleLanguage.English -> R.string.language_english
         SubtitleLanguage.Off -> R.string.subtitles_off
-    }
-
-@get:StringRes
-private val SubtitleSize.labelRes: Int
-    get() = when (this) {
-        SubtitleSize.VerySmall -> R.string.size_very_small
-        SubtitleSize.Small -> R.string.size_small
-        SubtitleSize.Medium -> R.string.size_medium
-        SubtitleSize.Large -> R.string.size_large
-        SubtitleSize.VeryLarge -> R.string.size_very_large
     }
 
 @get:StringRes

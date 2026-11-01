@@ -32,14 +32,6 @@ enum class SubtitleLanguage(val code: String?) {
     Off(null)
 }
 
-enum class SubtitleSize(val scale: Float) {
-    VerySmall(0.25f),
-    Small(0.5f),
-    Medium(1f),
-    Large(1.5f),
-    VeryLarge(2f)
-}
-
 enum class SubtitlePosition(val scale: Float) {
     VeryLow(0.5f),
     Low(1f),
@@ -50,7 +42,6 @@ enum class SubtitlePosition(val scale: Float) {
 data class PlaybackSettings(
     val audioLanguage: AudioLanguage = AudioLanguage.First,
     val subtitleLanguage: SubtitleLanguage = SubtitleLanguage.Greek,
-    val subtitleSize: SubtitleSize = SubtitleSize.Medium,
     val subtitlePosition: SubtitlePosition = SubtitlePosition.Low
 )
 
@@ -64,7 +55,6 @@ class AppPreferences(
         PlaybackSettings(
             audioLanguage = it.read(AUDIO_LANGUAGE, AudioLanguage.First),
             subtitleLanguage = it.read(SUBTITLE_LANGUAGE, SubtitleLanguage.Greek),
-            subtitleSize = it.read(SUBTITLE_SIZE, SubtitleSize.Medium),
             subtitlePosition = it.read(SUBTITLE_POSITION, SubtitlePosition.Low)
         )
     }.distinctUntilChanged()
@@ -80,8 +70,6 @@ class AppPreferences(
 
     suspend fun setSubtitleLanguage(value: SubtitleLanguage) = store.edit { it[SUBTITLE_LANGUAGE] = value.name }
 
-    suspend fun setSubtitleSize(value: SubtitleSize) = store.edit { it[SUBTITLE_SIZE] = value.name }
-
     suspend fun setSubtitlePosition(value: SubtitlePosition) = store.edit { it[SUBTITLE_POSITION] = value.name }
 
     private inline fun <reified T : Enum<T>> Preferences.read(key: Preferences.Key<String>, default: T): T =
@@ -95,7 +83,6 @@ class AppPreferences(
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val AUDIO_LANGUAGE = stringPreferencesKey("audio_language")
         val SUBTITLE_LANGUAGE = stringPreferencesKey("subtitle_language")
-        val SUBTITLE_SIZE = stringPreferencesKey("subtitle_size")
         val SUBTITLE_POSITION = stringPreferencesKey("subtitle_position")
     }
 }
