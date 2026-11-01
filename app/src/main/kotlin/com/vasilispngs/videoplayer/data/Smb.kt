@@ -2,11 +2,14 @@ package com.vasilispngs.videoplayer.data
 
 import android.net.Uri
 import com.hierynomus.msdtyp.AccessMask
+import com.hierynomus.mserref.NtStatus
 import com.hierynomus.msfscc.FileAttributes
 import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2ShareAccess
+import com.hierynomus.mssmb2.SMBApiException
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.auth.AuthenticationContext
+import com.hierynomus.smbj.common.SMBRuntimeException
 import com.hierynomus.smbj.share.DiskShare
 import com.hierynomus.smbj.share.File
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +21,8 @@ import java.io.IOException
 import java.util.EnumSet
 
 internal const val SMB_SCHEME = "smb"
+
+private val STALE = setOf(NtStatus.STATUS_USER_SESSION_DELETED, NtStatus.STATUS_NETWORK_SESSION_EXPIRED, NtStatus.STATUS_NETWORK_NAME_DELETED)
 
 class Smb(private val computers: ComputerDao, private val secrets: Secrets) {
     private val client = SMBClient()
@@ -38,28 +43,33 @@ class Smb(private val computers: ComputerDao, private val secrets: Secrets) {
         synchronized(shares) { shares.remove(key(computer.host, computer.share)) }
     }
 
-    fun list(folder: Uri): List<Entry> = share(folder).list(path(folder))
+    fun list(folder: Uri): List<Entry> = withShare(folder) { path -> list(path) }
         .filter { it.fileName != "." && it.fileName != ".." && !it.fileAttributes.has(FileAttributes.FILE_ATTRIBUTE_HIDDEN) }
         .map { info ->
             val directory = info.fileAttributes.has(FileAttributes.FILE_ATTRIBUTE_DIRECTORY)
             Entry(info.fileName, folder.buildUpon().appendPath(info.fileName).build(), kindOf(info.fileName, directory), info.endOfFile)
         }
 
-    fun open(uri: Uri): File = share(uri).openFile(
-        path(uri),
-        EnumSet.of(AccessMask.GENERIC_READ),
-        null,
-        SMB2ShareAccess.ALL,
-        SMB2CreateDisposition.FILE_OPEN,
-        null
-    )
+    fun open(uri: Uri): File = withShare(uri) {
+        openFile(it, EnumSet.of(AccessMask.GENERIC_READ), null, SMB2ShareAccess.ALL, SMB2CreateDisposition.FILE_OPEN, null)
+    }
 
-    private fun share(uri: Uri): DiskShare {
+    private fun <T> withShare(uri: Uri, action: DiskShare.(String) -> T): T {
         val host = uri.authority ?: throw FileNotFoundException(uri.toString())
         val name = uri.pathSegments.firstOrNull() ?: throw FileNotFoundException(uri.toString())
-        synchronized(shares) { shares[key(host, name)]?.takeIf { it.isConnected }?.let { return it } }
+        val key = key(host, name)
+        val path = uri.pathSegments.drop(1).joinToString("\\")
+        synchronized(shares) { shares[key] }?.let { cached ->
+            try {
+                return cached.action(path)
+            } catch (exception: SMBRuntimeException) {
+                if (exception is SMBApiException && exception.status !in STALE) throw exception
+                synchronized(shares) { shares.remove(key, cached) }
+                val _ = runCatching { cached.treeConnect.session.connection.close(true) }
+            }
+        }
         val computer = runBlocking { computers.find(host, name) } ?: throw FileNotFoundException(uri.toString())
-        return connect(host, name, computer.user, secrets.decrypt(computer.password))
+        return connect(host, name, computer.user, secrets.decrypt(computer.password)).action(path)
     }
 
     private fun connect(host: String, name: String, user: String, password: String): DiskShare {
@@ -69,8 +79,6 @@ class Smb(private val computers: ComputerDao, private val secrets: Secrets) {
         synchronized(shares) { shares[key(host, name)] = share }
         return share
     }
-
-    private fun path(uri: Uri): String = uri.pathSegments.drop(1).joinToString("\\")
 
     private fun key(host: String, share: String) = "$host/$share"
 }
