@@ -16,14 +16,14 @@ import java.io.File
 import java.io.IOException
 import java.util.UUID
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val MEMORY_BYTES = 8 shl 20
 private const val BYTES_PER_PIXEL = 4
 private const val QUALITY = 90
-private const val REPRESENTATIVE_FRAME = -1L
 
 class Thumbnails(context: Context) {
-    private val folder = File(context.cacheDir, "thumbnails")
+    private val folder = File(context.cacheDir, "frames")
     private val memory = object : LruCache<String, ImageBitmap>(MEMORY_BYTES) {
         override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * BYTES_PER_PIXEL
     }
@@ -67,11 +67,12 @@ class Thumbnails(context: Context) {
             val width = retriever.number(if (turned) MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT else MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
             val height = retriever.number(if (turned) MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH else MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
             val scale = maxOf(size.width.toFloat() / width, size.height.toFloat() / height)
+            val middle = (retriever.number(MediaMetadataRetriever.METADATA_KEY_DURATION).milliseconds / 2).inWholeMicroseconds
             when {
                 width <= 0 || height <= 0 -> null
-                scale >= 1f -> retriever.getFrameAtTime(REPRESENTATIVE_FRAME, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, BitmapParams())
+                scale >= 1f -> retriever.getFrameAtTime(middle, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, BitmapParams())
                 else -> retriever.getScaledFrameAtTime(
-                    REPRESENTATIVE_FRAME,
+                    middle,
                     MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
                     (width * scale).roundToInt(),
                     (height * scale).roundToInt(),

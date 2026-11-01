@@ -18,6 +18,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowMediaMetadataRetriever
+import org.robolectric.shadows.util.DataSource
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
@@ -35,7 +36,7 @@ class ThumbnailsTest {
     }
 
     @Test
-    fun `shows the frame Android picks from the start and keeps it for the next launch`() = runTest {
+    fun `shows the frame from the middle of the video and keeps it for the next launch`() = runTest {
         val video = folder.newFile("Movie.mkv")
         addVideo(video)
         val thumbnails = Thumbnails(context)
@@ -61,19 +62,22 @@ class ThumbnailsTest {
     @Test
     fun `keeps nothing for a video that is gone`() = runTest {
         assertNull(Thumbnails(context).load(Uri.fromFile(File(folder.root, "Gone.mkv")), size))
-        assertNull(File(context.cacheDir, "thumbnails").list()?.takeIf { it.isNotEmpty() })
+        assertNull(File(context.cacheDir, "frames").list()?.takeIf { it.isNotEmpty() })
     }
 
     private fun addVideo(video: File) {
-        ShadowMediaMetadataRetriever.addMetadata(video.path, MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH, "$VIDEO_WIDTH")
-        ShadowMediaMetadataRetriever.addMetadata(video.path, MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT, "$VIDEO_HEIGHT")
+        val source = DataSource.toDataSource(video.path)
+        ShadowMediaMetadataRetriever.addMetadata(source, MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH, "$VIDEO_WIDTH")
+        ShadowMediaMetadataRetriever.addMetadata(source, MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT, "$VIDEO_HEIGHT")
+        ShadowMediaMetadataRetriever.addMetadata(source, MediaMetadataRetriever.METADATA_KEY_DURATION, "$DURATION_MS")
         val frame = Bitmap.createBitmap(VIDEO_WIDTH, VIDEO_HEIGHT, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
-        ShadowMediaMetadataRetriever.addFrame(video.path, REPRESENTATIVE_FRAME, frame)
+        ShadowMediaMetadataRetriever.addFrame(source, MIDDLE_US, frame)
     }
 
     private companion object {
         const val VIDEO_WIDTH = 160
         const val VIDEO_HEIGHT = 90
-        const val REPRESENTATIVE_FRAME = -1L
+        const val DURATION_MS = 9_960_000L
+        const val MIDDLE_US = 4_980_000_000L
     }
 }
