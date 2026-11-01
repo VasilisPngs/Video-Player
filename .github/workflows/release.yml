@@ -8,15 +8,9 @@ on:
       - '**.md'
       - '.claude/**'
   workflow_dispatch:
-    inputs:
-      media3:
-        description: Media3 version to build with
-        required: false
-        type: string
 
 permissions:
   contents: write
-  issues: write
 
 concurrency:
   group: release
@@ -55,12 +49,6 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
-
-      - name: Use the requested Media3 version
-        if: inputs.media3 != ''
-        env:
-          MEDIA3: ${{ inputs.media3 }}
-        run: sed -i -E "s/^media3 = \"[^\"]+\"/media3 = \"$MEDIA3\"/" gradle/libs.versions.toml
 
       - name: Find Media3 version
         id: media3
@@ -137,28 +125,6 @@ jobs:
         run: |
           find . -path '*/build/outputs/androidTest-results/*' -name '*.xml' -exec cat {} +
           find . -path '*/build/*' -name 'logcat-*.txt' -exec tail -n 200 {} +
-
-      - name: Commit the Media3 update
-        if: inputs.media3 != ''
-        env:
-          MEDIA3: ${{ inputs.media3 }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit --quiet -am "Update Media3 to $MEDIA3"
-          git push --quiet origin HEAD:main
-
-      - name: Report a failed Media3 update
-        if: failure() && inputs.media3 != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          MEDIA3: ${{ inputs.media3 }}
-          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: >-
-          gh issue create --repo "$REPO"
-          --title "Media3 $MEDIA3 failed"
-          --body "Video Player stays on the last Media3 version that built and passed its checks. Run: $RUN"
 
       - name: Publish release
         env:
