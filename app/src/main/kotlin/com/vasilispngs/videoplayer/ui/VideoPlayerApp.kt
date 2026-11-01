@@ -178,14 +178,14 @@ fun VideoPlayerApp(viewModel: HomeViewModel, themeMode: ThemeMode, modifier: Mod
         predictivePopTransitionSpec = { predictiveBackTransition() },
         entryProvider = entryProvider {
             entry<Screen.Home> {
-                HomeScreen(viewModel = viewModel, onOpen = open, onSettings = { open(Screen.Settings) })
+                HomeScreen(viewModel = viewModel, thumbnails = container.thumbnails, onOpen = open, onSettings = { open(Screen.Settings) })
             }
             entry<Screen.Settings> {
                 SettingsScreen(viewModel = viewModel, themeMode = themeMode, onBack = goBack)
             }
             entry<Screen.Folder> { key ->
                 val folder = viewModel { FolderViewModel(key.uri.toUri(), container.library) }
-                FolderScreen(title = key.title, viewModel = folder, onOpen = open, onBack = goBack)
+                FolderScreen(title = key.title, viewModel = folder, thumbnails = container.thumbnails, onOpen = open, onBack = goBack)
             }
             entry<Screen.Player> { key ->
                 val player = viewModel {

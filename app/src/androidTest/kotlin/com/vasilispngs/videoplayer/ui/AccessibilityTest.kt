@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.core.net.toUri
+import androidx.test.platform.app.InstrumentationRegistry
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.data.Entry
 import com.vasilispngs.videoplayer.data.ErrorCode
@@ -21,6 +22,7 @@ import com.vasilispngs.videoplayer.data.Playback
 import com.vasilispngs.videoplayer.data.PlaybackSettings
 import com.vasilispngs.videoplayer.data.SelfUpdate
 import com.vasilispngs.videoplayer.data.ThemeMode
+import com.vasilispngs.videoplayer.data.Thumbnails
 import com.vasilispngs.videoplayer.data.Volume
 import com.vasilispngs.videoplayer.ui.theme.VideoPlayerTheme
 import org.junit.Before
@@ -32,6 +34,8 @@ class AccessibilityTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private var dark by mutableStateOf(false)
+
+    private val thumbnails = Thumbnails(InstrumentationRegistry.getInstrumentation().targetContext)
 
     @Before
     fun enableAccessibilityChecks() {
@@ -107,13 +111,14 @@ class AccessibilityTest {
             inProgress = inProgress,
             allFiles = allFiles,
             onAllFiles = {},
+            thumbnails = thumbnails,
             onOpen = {},
             onSettings = {}
         )
     }
 
     private fun showFolder(listing: Listing) = show {
-        FolderContent(title = "SanDisk", listing = listing, onOpen = {}, onBack = {})
+        FolderContent(title = "SanDisk", listing = listing, thumbnails = thumbnails, onOpen = {}, onBack = {})
     }
 
     private fun show(content: @Composable () -> Unit) {

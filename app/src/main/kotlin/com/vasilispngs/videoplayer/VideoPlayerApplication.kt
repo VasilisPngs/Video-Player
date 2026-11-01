@@ -11,6 +11,7 @@ import com.vasilispngs.videoplayer.data.AppDatabase
 import com.vasilispngs.videoplayer.data.AppPreferences
 import com.vasilispngs.videoplayer.data.Library
 import com.vasilispngs.videoplayer.data.SelfUpdater
+import com.vasilispngs.videoplayer.data.Thumbnails
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,6 +37,7 @@ class AppContainer(context: Context) {
     val preferences = AppPreferences(context)
     val playback = database.playback()
     val library = Library(context)
+    val thumbnails = Thumbnails(context)
     val selfUpdater = SelfUpdater(context, scope) { http.openConnection(it) }
 }
 

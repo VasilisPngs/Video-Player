@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.provider.Settings
+import android.util.Size
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +37,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.data.Playback
+import com.vasilispngs.videoplayer.data.Thumbnails
 import com.vasilispngs.videoplayer.data.Volume
 import com.vasilispngs.videoplayer.data.fileName
 import kotlin.math.ceil
@@ -43,7 +45,7 @@ import kotlin.math.ceil
 private const val MILLIS_PER_MINUTE = 60_000.0
 
 @Composable
-fun HomeScreen(viewModel: HomeViewModel, onOpen: (Screen) -> Unit, onSettings: () -> Unit) {
+fun HomeScreen(viewModel: HomeViewModel, thumbnails: Thumbnails, onOpen: (Screen) -> Unit, onSettings: () -> Unit) {
     val volumes by viewModel.volumes.collectAsStateWithLifecycle()
     val inProgress by viewModel.inProgress.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -57,6 +59,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpen: (Screen) -> Unit, onSettings: (
         inProgress = inProgress,
         allFiles = allFiles,
         onAllFiles = allFilesSettings?.let { intent -> { context.open(intent) } },
+        thumbnails = thumbnails,
         onOpen = onOpen,
         onSettings = onSettings
     )
@@ -68,6 +71,7 @@ internal fun HomeContent(
     inProgress: List<Playback>?,
     allFiles: Boolean,
     onAllFiles: (() -> Unit)?,
+    thumbnails: Thumbnails,
     onOpen: (Screen) -> Unit,
     onSettings: () -> Unit
 ) {
@@ -79,6 +83,7 @@ internal fun HomeContent(
     val empty = loaded && progress.isEmpty() && sources == 0
     val focus = rememberInitialFocus(loaded && !empty)
     val listState = rememberLazyListState()
+    val thumbnailSize = rememberThumbnailSize()
 
     ReportDrawnWhen { loaded }
 
@@ -105,7 +110,14 @@ internal fun HomeContent(
                 if (progress.isNotEmpty()) {
                     item(key = "continue", contentType = HEADER) { SectionHeader(text = stringResource(R.string.continue_watching)) }
                     itemsIndexed(progress, key = { _, item -> "${item.uri}#${item.size}" }, contentType = { _, _ -> ROW }) { index, item ->
-                        ContinueItem(item = item, index = index, count = progress.size, onClick = { onOpen(Screen.Player(item.uri)) })
+                        ContinueItem(
+                            item = item,
+                            index = index,
+                            count = progress.size,
+                            thumbnails = thumbnails,
+                            thumbnailSize = thumbnailSize,
+                            onClick = { onOpen(Screen.Player(item.uri)) }
+                        )
                     }
                 }
                 if (sources > 0) {
@@ -123,12 +135,13 @@ internal fun HomeContent(
 }
 
 @Composable
-private fun ContinueItem(item: Playback, index: Int, count: Int, onClick: () -> Unit) {
+private fun ContinueItem(item: Playback, index: Int, count: Int, thumbnails: Thumbnails, thumbnailSize: Size, onClick: () -> Unit) {
+    val video = remember(item.uri) { item.uri.toUri() }
     SegmentedListItem(
         onClick = onClick,
         shapes = ListItemDefaults.segmentedShapes(index, count),
         colors = listItemColors(),
-        leadingContent = { Icon(painter = painterResource(R.drawable.ic_movie), contentDescription = null) },
+        leadingContent = { Thumbnail(video = video, icon = R.drawable.ic_movie, thumbnails = thumbnails, size = thumbnailSize) },
         supportingContent = if (item.durationMs > item.positionMs) {
             {
                 val minutes = ceil((item.durationMs - item.positionMs) / MILLIS_PER_MINUTE).toInt()
@@ -138,7 +151,7 @@ private fun ContinueItem(item: Playback, index: Int, count: Int, onClick: () -> 
             null
         }
     ) {
-        Text(text = item.uri.toUri().fileName)
+        Text(text = video.fileName)
     }
 }
 
