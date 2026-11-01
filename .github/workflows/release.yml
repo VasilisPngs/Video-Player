@@ -136,7 +136,7 @@ jobs:
           if gh release view "$TAG_NAME" --repo "$REPO" >/dev/null 2>&1; then
             gh release upload "$TAG_NAME" Video-Player.apk --repo "$REPO" --clobber
             gh api --method PATCH "repos/$REPO/git/refs/tags/$TAG_NAME" \
-              -f sha="$(git rev-parse HEAD)" -F force=true --silent
+              -f sha="$GITHUB_SHA" -F force=true --silent
           else
             gh release create "$TAG_NAME" Video-Player.apk \
               --repo "$REPO" \
