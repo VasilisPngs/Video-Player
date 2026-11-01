@@ -51,9 +51,6 @@ android {
             signingConfig = signingConfigs.getByName("release")
             optimization {
                 enable = true
-                keepRules {
-                    files.add(file("proguard-rules.pro"))
-                }
             }
         }
         create("nonMinifiedRelease") {
@@ -124,7 +121,6 @@ dependencies {
     implementation(libs.androidx.profileinstaller)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.core)
-    implementation(libs.smbj)
     implementation(libs.chardet4j)
     ksp(libs.androidx.room3.compiler)
     androidLintTool(platform(libs.asm.bom))

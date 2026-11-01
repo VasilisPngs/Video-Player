@@ -8,15 +8,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.core.net.toUri
 import com.vasilispngs.videoplayer.R
-import com.vasilispngs.videoplayer.data.Computer
 import com.vasilispngs.videoplayer.data.Entry
 import com.vasilispngs.videoplayer.data.ErrorCode
 import com.vasilispngs.videoplayer.data.Kind
@@ -43,21 +40,17 @@ class AccessibilityTest {
 
     @Test
     fun home() {
-        showHome()
+        showHome(
+            volumes = listOf(Volume("SanDisk", "file:///storage/usb".toUri())),
+            inProgress = listOf(Playback(uri = "file:///storage/usb/Movie.mkv", size = SIZE, positionMs = POSITION, durationMs = DURATION)),
+            allFiles = false
+        )
         checkLightAndDark()
     }
 
     @Test
-    fun addComputer() {
-        showHome()
-        compose.onNodeWithText(string(R.string.add_computer)).performClick()
-        checkLightAndDark()
-    }
-
-    @Test
-    fun removeComputer() {
-        showHome()
-        compose.onAllNodesWithContentDescription(string(R.string.remove)).onFirst().performClick()
+    fun emptyHome() {
+        showHome(volumes = emptyList(), inProgress = emptyList(), allFiles = true)
         checkLightAndDark()
     }
 
@@ -108,19 +101,14 @@ class AccessibilityTest {
         checkLightAndDark()
     }
 
-    private fun showHome() = show {
+    private fun showHome(volumes: List<Volume>, inProgress: List<Playback>, allFiles: Boolean) = show {
         HomeContent(
-            volumes = listOf(Volume("SanDisk", "file:///storage/usb".toUri())),
-            computers = listOf(Computer(id = 1, host = "192.168.1.10", share = "Ταινίες", user = "user", password = ByteArray(0))),
-            inProgress = listOf(Playback(uri = "file:///storage/usb/Movie.mkv", size = SIZE, positionMs = POSITION, durationMs = DURATION)),
-            allFiles = false,
+            volumes = volumes,
+            inProgress = inProgress,
+            allFiles = allFiles,
             onAllFiles = {},
-            adding = Connection.Idle,
             onOpen = {},
-            onSettings = {},
-            onAddComputer = { _, _, _, _ -> },
-            onAddingHandled = {},
-            onRemoveComputer = {}
+            onSettings = {}
         )
     }
 

@@ -3,10 +3,7 @@ package com.vasilispngs.videoplayer.player
 import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
-import com.vasilispngs.videoplayer.data.FakeComputers
 import com.vasilispngs.videoplayer.data.Library
-import com.vasilispngs.videoplayer.data.Secrets
-import com.vasilispngs.videoplayer.data.Smb
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -22,7 +19,7 @@ class ExternalSubtitlesTest {
     @get:Rule
     val folder = TemporaryFolder()
 
-    private val library = Library(RuntimeEnvironment.getApplication(), Smb(FakeComputers(), Secrets()))
+    private val library = Library(RuntimeEnvironment.getApplication())
 
     @Test
     fun `loads the subtitles next to a video with the same name`() = runTest {

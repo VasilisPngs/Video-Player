@@ -1,7 +1,6 @@
 package com.vasilispngs.videoplayer.data
 
 import android.net.http.NetworkException
-import com.hierynomus.mssmb2.SMBApiException
 import java.io.IOException
 
 sealed interface ErrorCode {
@@ -15,7 +14,6 @@ internal fun Throwable.errorCode(): ErrorCode {
     val chain = generateSequence(this) { it.cause }
     chain.filterIsInstance<HttpStatusException>().firstOrNull()?.let { return ErrorCode.Http(it.status) }
     chain.filterIsInstance<NetworkException>().firstOrNull()?.let { return ErrorCode.Named(it.errorName) }
-    chain.filterIsInstance<SMBApiException>().firstOrNull()?.let { return ErrorCode.Named(it.status.name) }
     return ErrorCode.Named(
         generateSequence<Class<*>>(chain.last().javaClass) { it.superclass }
             .first { it.classLoader === Throwable::class.java.classLoader }

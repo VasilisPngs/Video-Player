@@ -1,29 +1,21 @@
 package com.vasilispngs.videoplayer.data
 
 import android.content.Context
+import androidx.room3.AutoMigration
 import androidx.room3.ColumnInfo
 import androidx.room3.Dao
 import androidx.room3.Database
+import androidx.room3.DeleteTable
 import androidx.room3.Entity
-import androidx.room3.Index
-import androidx.room3.Insert
-import androidx.room3.OnConflictStrategy
-import androidx.room3.PrimaryKey
 import androidx.room3.Query
 import androidx.room3.Room
 import androidx.room3.RoomDatabase
 import androidx.room3.Upsert
+import androidx.room3.migration.AutoMigrationSpec
+import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.AndroidSQLiteDriver
+import androidx.sqlite.execSQL
 import kotlinx.coroutines.flow.Flow
-
-@Entity(tableName = "computers", indices = [Index(value = ["host", "share"], unique = true)])
-class Computer(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val host: String,
-    val share: String,
-    val user: String,
-    val password: ByteArray
-)
 
 @Entity(tableName = "playback", primaryKeys = ["uri", "size"])
 data class Playback(
@@ -39,21 +31,6 @@ data class Playback(
 )
 
 @Dao
-interface ComputerDao {
-    @Query("SELECT * FROM computers ORDER BY host, share")
-    fun observe(): Flow<List<Computer>>
-
-    @Query("SELECT * FROM computers WHERE host = :host AND share = :share")
-    suspend fun find(host: String, share: String): Computer?
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(computer: Computer)
-
-    @Query("DELETE FROM computers WHERE id = :id")
-    suspend fun delete(id: Long)
-}
-
-@Dao
 interface PlaybackDao {
     @Query("SELECT * FROM playback WHERE position_ms > 0 ORDER BY updated_at DESC")
     fun inProgress(): Flow<List<Playback>>
@@ -65,15 +42,26 @@ interface PlaybackDao {
     suspend fun save(playback: Playback)
 }
 
-@Database(entities = [Computer::class, Playback::class], version = 1)
+@Database(
+    entities = [Playback::class],
+    version = 2,
+    autoMigrations = [AutoMigration(from = 1, to = 2, spec = AppDatabase.RemoveComputers::class)]
+)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun computers(): ComputerDao
-
     abstract fun playback(): PlaybackDao
 
+    @DeleteTable(tableName = "computers")
+    class RemoveComputers : AutoMigrationSpec {
+        override suspend fun onPostMigrate(connection: SQLiteConnection) {
+            connection.execSQL("DELETE FROM playback WHERE uri LIKE 'smb:%'")
+        }
+    }
+
     companion object {
-        fun create(context: Context): AppDatabase = Room.databaseBuilder<AppDatabase>(context, "video-player.db")
+        fun create(context: Context): AppDatabase = Room.databaseBuilder<AppDatabase>(context, DATABASE_NAME)
             .setDriver(AndroidSQLiteDriver())
             .build()
     }
 }
+
+internal const val DATABASE_NAME = "video-player.db"

@@ -10,9 +10,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import com.vasilispngs.videoplayer.data.AppDatabase
 import com.vasilispngs.videoplayer.data.AppPreferences
 import com.vasilispngs.videoplayer.data.Library
-import com.vasilispngs.videoplayer.data.Secrets
 import com.vasilispngs.videoplayer.data.SelfUpdater
-import com.vasilispngs.videoplayer.data.Smb
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,8 +35,7 @@ class AppContainer(context: Context) {
 
     val preferences = AppPreferences(context)
     val playback = database.playback()
-    val smb = Smb(database.computers(), Secrets())
-    val library = Library(context, smb)
+    val library = Library(context)
     val selfUpdater = SelfUpdater(context, scope) { http.openConnection(it) }
 }
 

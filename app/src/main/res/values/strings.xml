@@ -3,27 +3,17 @@
     <string name="home">Αρχική</string>
     <string name="settings">Ρυθμίσεις</string>
     <string name="back">Πίσω</string>
-    <string name="save">Αποθήκευση</string>
     <string name="cancel">Ακύρωση</string>
-    <string name="remove">Κατάργηση</string>
     <string name="continue_watching">Συνέχεια παρακολούθησης</string>
     <plurals name="minutes_left">
         <item quantity="one">Απομένει %1$d λεπτό</item>
         <item quantity="other">Απομένουν %1$d λεπτά</item>
     </plurals>
     <string name="sources">Πηγές</string>
+    <string name="usb_empty">Συνδέστε μια μονάδα USB</string>
     <string name="all_files_access">Πρόσβαση σε όλα τα αρχεία</string>
     <string name="all_files_access_description">Χρειάζεται για τα αρχεία του USB. Από τον υπολογιστή: %1$s</string>
     <string name="all_files_access_command" translatable="false" tools:ignore="TypographyDashes">adb shell appops set --uid %1$s MANAGE_EXTERNAL_STORAGE allow</string>
-    <string name="add_computer">Προσθήκη υπολογιστή</string>
-    <string name="computer_address">Υπολογιστής</string>
-    <string name="computer_address_example" translatable="false">192.168.1.10</string>
-    <string name="computer_share">Κοινόχρηστος φάκελος</string>
-    <string name="computer_user">Όνομα χρήστη</string>
-    <string name="computer_password">Κωδικός πρόσβασης</string>
-    <string name="computer_connecting">Σύνδεση…</string>
-    <string name="computer_failed">Δεν ήταν δυνατή η σύνδεση</string>
-    <string name="remove_computer">Να καταργηθεί ο υπολογιστής;</string>
     <string name="folder_empty">Ο φάκελος είναι κενός</string>
     <string name="folder_failed">Δεν ήταν δυνατό το άνοιγμα του φακέλου</string>
     <string name="playback">Αναπαραγωγή</string>

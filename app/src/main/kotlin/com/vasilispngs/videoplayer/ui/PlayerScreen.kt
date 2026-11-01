@@ -83,7 +83,6 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.vasilispngs.videoplayer.R
-import com.vasilispngs.videoplayer.appContainer
 import com.vasilispngs.videoplayer.data.ErrorCode
 import com.vasilispngs.videoplayer.data.SubtitlePosition
 import com.vasilispngs.videoplayer.data.SubtitleSize
@@ -106,7 +105,6 @@ private enum class Menu { Audio, Subtitles }
 @Composable
 fun PlayerScreen(viewModel: PlayerViewModel, onExit: () -> Unit, onNext: (Uri) -> Unit) {
     val context = LocalContext.current
-    val container = remember(context) { context.appContainer }
     val window = LocalActivity.current?.window
     val displayManager = remember(context) { context.getSystemService(DisplayManager::class.java) }
     val scope = rememberCoroutineScope()
@@ -114,7 +112,7 @@ fun PlayerScreen(viewModel: PlayerViewModel, onExit: () -> Unit, onNext: (Uri) -
     val failure by viewModel.failure.collectAsStateWithLifecycle()
 
     LifecycleStartEffect(viewModel) {
-        val exo = buildPlayer(context, container.smb, viewModel.delay)
+        val exo = buildPlayer(context, viewModel.delay)
         val session = MediaSession.Builder(context, exo).setId(viewModel.uri.toString()).build()
         player = exo
         val start = scope.launch { viewModel.start(exo) { frameRate -> window?.matchFrameRate(displayManager, frameRate) } }

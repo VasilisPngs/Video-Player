@@ -38,7 +38,6 @@ import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.text.CharsetDetector
 import androidx.media3.extractor.text.DefaultSubtitleParserFactory
 import com.sigpwned.chardet4j.Chardet
-import com.vasilispngs.videoplayer.data.Smb
 import java.nio.charset.Charset
 import kotlin.jvm.optionals.getOrNull
 
@@ -49,9 +48,9 @@ class SubtitleDelay {
     var us: Long = 0
 }
 
-internal fun buildPlayer(context: Context, smb: Smb, delay: SubtitleDelay): ExoPlayer {
+internal fun buildPlayer(context: Context, delay: SubtitleDelay): ExoPlayer {
     val mediaSources = DefaultMediaSourceFactory(
-        DefaultDataSource.Factory(context, SmbDataSource.Factory(smb)),
+        DefaultDataSource.Factory(context),
         BaseLayerExtractorsFactory(DefaultExtractorsFactory())
     ).setSubtitleParserFactory(DefaultSubtitleParserFactory(SubtitleCharsetDetector))
     return ExoPlayer.Builder(context, PlayerRenderersFactory(context, delay), mediaSources)

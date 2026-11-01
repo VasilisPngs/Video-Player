@@ -9,13 +9,14 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class LibraryTest {
     @get:Rule
     val folder = TemporaryFolder()
 
-    private val library = Library(RuntimeEnvironment.getApplication(), Smb(FakeComputers(), Secrets()))
+    private val library = Library(RuntimeEnvironment.getApplication())
 
     @Test
     fun `sorts episode numbers as numbers`() {
@@ -46,10 +47,10 @@ class LibraryTest {
     }
 
     @Test
-    fun `finds the folder and the name of a file on a computer`() {
-        val uri = smbUri("192.168.1.10", "Ταινίες").buildUpon().appendPath("Σειρά").appendPath("S01E01.mkv").build()
+    fun `finds the folder and the name of a file on a USB drive`() {
+        val uri = Uri.fromFile(File("/storage/1234-5678/Σειρά/S01E01.mkv"))
 
-        assertEquals(smbUri("192.168.1.10", "Ταινίες").buildUpon().appendPath("Σειρά").build(), uri.parent)
+        assertEquals(Uri.fromFile(File("/storage/1234-5678/Σειρά")), uri.parent)
         assertEquals("S01E01.mkv", uri.fileName)
     }
 }

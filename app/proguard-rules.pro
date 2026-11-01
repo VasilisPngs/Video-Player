@@ -1,2 +1,0 @@
--dontwarn javax.el.**
--dontwarn org.ietf.jgss.**

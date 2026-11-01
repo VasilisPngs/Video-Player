@@ -36,7 +36,7 @@ val fileNameOrder: Comparator<String> = Comparator(collator::compare)
 
 private val entryOrder = compareBy<Entry> { it.kind != Kind.Folder }.thenBy(fileNameOrder) { it.name }
 
-class Library(private val context: Context, private val smb: Smb) {
+class Library(private val context: Context) {
     val volumes: Flow<List<Volume>> = callbackFlow {
         val storage = context.getSystemService(StorageManager::class.java)
         fun update() {
@@ -53,27 +53,14 @@ class Library(private val context: Context, private val smb: Smb) {
     }.conflate()
 
     suspend fun list(folder: Uri): List<Entry> = withContext(Dispatchers.IO) {
-        if (folder.scheme == SMB_SCHEME) smb.list(folder) else local(folder)
+        val files = File(folder.requirePath()).listFiles() ?: throw IOException(folder.toString())
+        files.filterNot(File::isHidden).map { Entry(it.name, Uri.fromFile(it), kindOf(it.name, it.isDirectory), it.length()) }
     }.sortedWith(entryOrder)
 
-    suspend fun size(uri: Uri): Long = withContext(Dispatchers.IO) {
-        if (uri.scheme == SMB_SCHEME) smb.open(uri).use { it.fileInformation.standardInformation.endOfFile } else File(uri.requirePath()).length()
-    }
+    suspend fun size(uri: Uri): Long = withContext(Dispatchers.IO) { File(uri.requirePath()).length() }
 
     suspend fun head(uri: Uri, bytes: Int): ByteArray = withContext(Dispatchers.IO) {
-        if (uri.scheme == SMB_SCHEME) {
-            smb.open(uri).use { file ->
-                val buffer = ByteArray(bytes)
-                buffer.copyOf(file.read(buffer, 0).coerceAtLeast(0))
-            }
-        } else {
-            File(uri.requirePath()).inputStream().use { it.readNBytes(bytes) }
-        }
-    }
-
-    private fun local(folder: Uri): List<Entry> {
-        val files = File(folder.requirePath()).listFiles() ?: throw IOException(folder.toString())
-        return files.filterNot(File::isHidden).map { Entry(it.name, Uri.fromFile(it), kindOf(it.name, it.isDirectory), it.length()) }
+        File(uri.requirePath()).inputStream().use { it.readNBytes(bytes) }
     }
 
     private fun StorageVolume.toVolume(): Volume? {
