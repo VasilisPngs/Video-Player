@@ -374,16 +374,16 @@ private fun BoxScope.Controls(
                 ControlButton(icon = R.drawable.ic_replay_10, label = R.string.rewind, onClick = player::seekBack)
                 FilledIconButton(
                     onClick = playPause::onClick,
-                    shapes = IconButtonDefaults.shapes(IconButtonDefaults.largeRoundShape, IconButtonDefaults.largePressedShape),
+                    shapes = IconButtonDefaults.shapes(IconButtonDefaults.mediumRoundShape, IconButtonDefaults.mediumPressedShape),
                     modifier = Modifier
-                        .size(IconButtonDefaults.largeContainerSize())
+                        .size(IconButtonDefaults.mediumContainerSize())
                         .focusRequester(playFocus),
                     enabled = playPause.isEnabled
                 ) {
                     Icon(
                         painter = painterResource(if (playPause.showPlay) R.drawable.ic_play else R.drawable.ic_pause),
                         contentDescription = stringResource(if (playPause.showPlay) R.string.play else R.string.pause),
-                        modifier = Modifier.size(IconButtonDefaults.largeIconSize)
+                        modifier = Modifier.size(IconButtonDefaults.mediumIconSize)
                     )
                 }
                 ControlButton(icon = R.drawable.ic_forward_10, label = R.string.fast_forward, onClick = player::seekForward)
@@ -398,16 +398,8 @@ private fun BoxScope.Controls(
 
 @Composable
 private fun ControlButton(@DrawableRes icon: Int, @StringRes label: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    FilledTonalIconButton(
-        onClick = onClick,
-        shapes = IconButtonDefaults.shapes(IconButtonDefaults.mediumRoundShape, IconButtonDefaults.mediumPressedShape),
-        modifier = modifier.size(IconButtonDefaults.mediumContainerSize())
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = stringResource(label),
-            modifier = Modifier.size(IconButtonDefaults.mediumIconSize)
-        )
+    FilledTonalIconButton(onClick = onClick, shapes = IconButtonDefaults.shapes(), modifier = modifier) {
+        Icon(painter = painterResource(icon), contentDescription = stringResource(label))
     }
 }
 
