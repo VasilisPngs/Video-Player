@@ -96,7 +96,10 @@ jobs:
           openssl enc -d -aes-256-cbc -pbkdf2 \
             -in release.keystore.enc \
             -out release.keystore \
-            -k "$ANDROID_KEYSTORE_PASSWORD"
+            -k "$ANDROID_KEYSTORE_PASSWORD" || {
+            echo "::error::ANDROID_KEYSTORE_PASSWORD has ${#ANDROID_KEYSTORE_PASSWORD} characters and does not open release.keystore.enc"
+            exit 1
+          }
           test -s release.keystore
 
       - name: Enable KVM
