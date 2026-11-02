@@ -38,13 +38,12 @@ import com.vasilispngs.videoplayer.data.AudioLanguage
 import com.vasilispngs.videoplayer.data.PlaybackSettings
 import com.vasilispngs.videoplayer.data.SelfUpdate
 import com.vasilispngs.videoplayer.data.SubtitleLanguage
-import com.vasilispngs.videoplayer.data.SubtitlePosition
 import com.vasilispngs.videoplayer.data.ThemeMode
 import kotlin.math.roundToInt
 
-private enum class Choice { AudioLanguage, SubtitleLanguage, SubtitlePosition, Theme }
+private enum class Choice { AudioLanguage, SubtitleLanguage, Theme }
 
-private const val PLAYBACK_ROWS = 4
+private const val PLAYBACK_ROWS = 3
 
 @Composable
 fun SettingsScreen(viewModel: HomeViewModel, themeMode: ThemeMode, onBack: () -> Unit) {
@@ -69,7 +68,6 @@ fun SettingsScreen(viewModel: HomeViewModel, themeMode: ThemeMode, onBack: () ->
         onAudioLanguage = viewModel::setAudioLanguage,
         onSubtitleLanguage = viewModel::setSubtitleLanguage,
         onCaptionPreferences = { val _ = runCatching { context.startActivity(Intent(Settings.ACTION_CAPTIONING_SETTINGS)) } },
-        onSubtitlePosition = viewModel::setSubtitlePosition,
         onThemeMode = viewModel::setThemeMode
     )
 }
@@ -84,7 +82,6 @@ internal fun SettingsContent(
     onAudioLanguage: (AudioLanguage) -> Unit,
     onSubtitleLanguage: (SubtitleLanguage) -> Unit,
     onCaptionPreferences: () -> Unit,
-    onSubtitlePosition: (SubtitlePosition) -> Unit,
     onThemeMode: (ThemeMode) -> Unit
 ) {
     var choice by rememberSaveable { mutableStateOf<Choice?>(null) }
@@ -116,9 +113,6 @@ internal fun SettingsContent(
             item(key = "caption-preferences", contentType = ROW) {
                 ValueItem(R.string.caption_preferences, stringResource(R.string.caption_size_and_style), 2, PLAYBACK_ROWS, onCaptionPreferences)
             }
-            item(key = "subtitle-position", contentType = ROW) {
-                ValueItem(R.string.subtitle_position, stringResource(settings.subtitlePosition.labelRes), 3, PLAYBACK_ROWS) { choice = Choice.SubtitlePosition }
-            }
 
             item(key = "appearance", contentType = HEADER) { SectionHeader(text = stringResource(R.string.appearance)) }
             item(key = "theme", contentType = ROW) {
@@ -149,17 +143,6 @@ internal fun SettingsContent(
             onSelect = {
                 close()
                 onSubtitleLanguage(it)
-            }
-        )
-        Choice.SubtitlePosition -> OptionDialog(
-            title = stringResource(R.string.subtitle_position),
-            options = SubtitlePosition.entries,
-            current = settings.subtitlePosition,
-            label = { stringResource(it.labelRes) },
-            onDismiss = close,
-            onSelect = {
-                close()
-                onSubtitlePosition(it)
             }
         )
         Choice.Theme -> OptionDialog(
@@ -243,13 +226,4 @@ private val SubtitleLanguage.labelRes: Int
         SubtitleLanguage.Greek -> R.string.language_greek
         SubtitleLanguage.English -> R.string.language_english
         SubtitleLanguage.Off -> R.string.subtitles_off
-    }
-
-@get:StringRes
-private val SubtitlePosition.labelRes: Int
-    get() = when (this) {
-        SubtitlePosition.VeryLow -> R.string.position_very_low
-        SubtitlePosition.Low -> R.string.position_low
-        SubtitlePosition.Higher -> R.string.position_higher
-        SubtitlePosition.VeryHigh -> R.string.position_very_high
     }

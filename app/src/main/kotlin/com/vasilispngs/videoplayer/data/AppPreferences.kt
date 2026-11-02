@@ -32,17 +32,9 @@ enum class SubtitleLanguage(val code: String?) {
     Off(null)
 }
 
-enum class SubtitlePosition(val scale: Float) {
-    VeryLow(0.5f),
-    Low(1f),
-    Higher(2f),
-    VeryHigh(3f)
-}
-
 data class PlaybackSettings(
     val audioLanguage: AudioLanguage = AudioLanguage.First,
-    val subtitleLanguage: SubtitleLanguage = SubtitleLanguage.Greek,
-    val subtitlePosition: SubtitlePosition = SubtitlePosition.Low
+    val subtitleLanguage: SubtitleLanguage = SubtitleLanguage.Greek
 )
 
 class AppPreferences(
@@ -54,8 +46,7 @@ class AppPreferences(
     val playback: Flow<PlaybackSettings> = store.data.map {
         PlaybackSettings(
             audioLanguage = it.read(AUDIO_LANGUAGE, AudioLanguage.First),
-            subtitleLanguage = it.read(SUBTITLE_LANGUAGE, SubtitleLanguage.Greek),
-            subtitlePosition = it.read(SUBTITLE_POSITION, SubtitlePosition.Low)
+            subtitleLanguage = it.read(SUBTITLE_LANGUAGE, SubtitleLanguage.Greek)
         )
     }.distinctUntilChanged()
 
@@ -70,8 +61,6 @@ class AppPreferences(
 
     suspend fun setSubtitleLanguage(value: SubtitleLanguage) = store.edit { it[SUBTITLE_LANGUAGE] = value.name }
 
-    suspend fun setSubtitlePosition(value: SubtitlePosition) = store.edit { it[SUBTITLE_POSITION] = value.name }
-
     private inline fun <reified T : Enum<T>> Preferences.read(key: Preferences.Key<String>, default: T): T =
         enumValues<T>().firstOrNull { it.name == this[key] } ?: default
 
@@ -83,7 +72,6 @@ class AppPreferences(
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val AUDIO_LANGUAGE = stringPreferencesKey("audio_language")
         val SUBTITLE_LANGUAGE = stringPreferencesKey("subtitle_language")
-        val SUBTITLE_POSITION = stringPreferencesKey("subtitle_position")
     }
 }
 

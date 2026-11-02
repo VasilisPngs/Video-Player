@@ -36,9 +36,9 @@ class AppPreferencesTest {
     }
 
     @Test
-    fun `starts with the first audio track, Greek subtitles and the low position`() = runTest {
+    fun `starts with the first audio track and Greek subtitles`() = runTest {
         assertEquals(
-            PlaybackSettings(AudioLanguage.First, SubtitleLanguage.Greek, SubtitlePosition.Low),
+            PlaybackSettings(AudioLanguage.First, SubtitleLanguage.Greek),
             preferences().playback.first()
         )
     }
@@ -48,10 +48,9 @@ class AppPreferencesTest {
         val preferences = preferences()
         preferences.setAudioLanguage(AudioLanguage.English)
         preferences.setSubtitleLanguage(SubtitleLanguage.Off)
-        preferences.setSubtitlePosition(SubtitlePosition.VeryHigh)
 
         assertEquals(
-            PlaybackSettings(AudioLanguage.English, SubtitleLanguage.Off, SubtitlePosition.VeryHigh),
+            PlaybackSettings(AudioLanguage.English, SubtitleLanguage.Off),
             preferences.playback.first()
         )
     }

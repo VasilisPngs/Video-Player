@@ -14,7 +14,6 @@ import com.vasilispngs.videoplayer.data.Kind
 import com.vasilispngs.videoplayer.data.Library
 import com.vasilispngs.videoplayer.data.Playback
 import com.vasilispngs.videoplayer.data.PlaybackDao
-import com.vasilispngs.videoplayer.data.PlaybackSettings
 import com.vasilispngs.videoplayer.data.errorCode
 import com.vasilispngs.videoplayer.data.fileName
 import com.vasilispngs.videoplayer.data.parent
@@ -30,12 +29,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 private const val FINISHED_FRACTION = 0.95
@@ -60,8 +57,6 @@ class PlayerViewModel(
     val subtitleDelayMs: StateFlow<Long> = delayMs.asStateFlow()
 
     val failure: StateFlow<ErrorCode?> = failed.asStateFlow()
-
-    val settings: StateFlow<PlaybackSettings> = preferences.playback.stateIn(viewModelScope, SharingStarted.Eagerly, PlaybackSettings())
 
     var next: Uri? = null
         private set

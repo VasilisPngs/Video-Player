@@ -87,7 +87,6 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.data.ErrorCode
-import com.vasilispngs.videoplayer.data.SubtitlePosition
 import com.vasilispngs.videoplayer.data.fileName
 import com.vasilispngs.videoplayer.player.audio
 import com.vasilispngs.videoplayer.player.buildPlayer
@@ -148,7 +147,6 @@ private fun PlayerContent(
     onExit: () -> Unit,
     onNext: (Uri) -> Unit
 ) {
-    val settings by viewModel.settings.collectAsStateWithLifecycle()
     val subtitleDelay by viewModel.subtitleDelayMs.collectAsStateWithLifecycle()
     val playPause = rememberPlayPauseButtonState(player)
     val error = rememberErrorState(player).error
@@ -241,7 +239,7 @@ private fun PlayerContent(
             player = player,
             modifier = Modifier.fillMaxSize(),
             surfaceType = SURFACE_TYPE_SURFACE_VIEW,
-            subtitles = { Subtitles(player = player, position = settings.subtitlePosition) }
+            subtitles = { Subtitles(player = player) }
         )
         if (playPause.showBuffering) LoadingIndicator(modifier = Modifier.align(Alignment.Center))
         if (controls) {
@@ -323,7 +321,7 @@ private fun PlayerContent(
 }
 
 @Composable
-private fun Subtitles(player: Player, position: SubtitlePosition) {
+private fun Subtitles(player: Player) {
     val context = LocalContext.current
     val view = remember(context) { SubtitleView(context) }
     val captioning = remember(context) { context.getSystemService(CaptioningManager::class.java) }
@@ -358,7 +356,6 @@ private fun Subtitles(player: Player, position: SubtitlePosition) {
         update = {
             it.setStyle(CaptionStyleCompat.createFromCaptionStyle(style))
             it.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * scale)
-            it.setBottomPaddingFraction(SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION * position.scale)
         }
     )
 }
