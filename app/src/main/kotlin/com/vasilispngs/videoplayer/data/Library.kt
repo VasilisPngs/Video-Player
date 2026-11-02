@@ -22,6 +22,9 @@ data class Entry(val name: String, val uri: Uri, val kind: Kind, val size: Long)
 
 data class Volume(val name: String, val uri: Uri)
 
+internal fun List<Playback>.onMounted(volumes: List<Volume>): List<Playback> =
+    filter { playback -> volumes.any { playback.uri.startsWith("${it.uri}/") } }
+
 private val VIDEO_EXTENSIONS = setOf("avi", "m2ts", "m4v", "mkv", "mov", "mp4", "mpeg", "mpg", "mts", "ts", "webm")
 
 internal fun kindOf(name: String, directory: Boolean): Kind = when {

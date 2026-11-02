@@ -57,6 +57,7 @@
         <item quantity="one">Ξεκινά σε %1$d δευτερόλεπτο</item>
         <item quantity="other">Ξεκινά σε %1$d δευτερόλεπτα</item>
     </plurals>
+    <string name="refresh_rate_changing">Αλλαγή ρυθμού ανανέωσης…</string>
     <string name="track_label" translatable="false">%1$s · %2$s</string>
     <string name="playback_failed">Δεν ήταν δυνατή η αναπαραγωγή</string>
     <string name="error_with_code">%1$s (%2$s)</string>

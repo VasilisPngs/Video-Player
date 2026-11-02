@@ -1,5 +1,7 @@
 package com.vasilispngs.videoplayer.player
 
+import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -34,6 +36,36 @@ class DisplayModesTest {
     fun `stays put when no refresh rate fits or the frame rate is unknown`() {
         assertNull(refreshRateFor(60f, listOf(60f), 24f))
         assertNull(refreshRateFor(60f, TELEVISION, -1f))
+    }
+
+    @Test
+    fun `shows the notice through the switch and two seconds after it`() = runTest {
+        val events = mutableListOf<String>()
+
+        switchWithNotice({ events += "${if (it == null) "hide" else "show"} ${currentTime}" }) { true.also { events += "switch ${currentTime}" } }
+
+        assertEquals(listOf("show 0", "switch 0", "hide 2000"), events)
+    }
+
+    @Test
+    fun `plays at once when the notice is dismissed`() = runTest {
+        val events = mutableListOf<String>()
+
+        switchWithNotice({ notice ->
+            notice?.complete(Unit)
+            events += "${if (notice == null) "hide" else "show"} ${currentTime}"
+        }) { true.also { events += "switch ${currentTime}" } }
+
+        assertEquals(listOf("show 0", "switch 0", "hide 0"), events)
+    }
+
+    @Test
+    fun `plays at once when the television keeps its mode`() = runTest {
+        val events = mutableListOf<String>()
+
+        switchWithNotice({ events += "${if (it == null) "hide" else "show"} ${currentTime}" }) { false.also { events += "switch ${currentTime}" } }
+
+        assertEquals(listOf("show 0", "switch 0", "hide 0"), events)
     }
 
     private companion object {

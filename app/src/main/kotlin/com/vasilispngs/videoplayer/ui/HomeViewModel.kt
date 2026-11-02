@@ -19,8 +19,11 @@ import com.vasilispngs.videoplayer.data.SubtitleLanguage
 import com.vasilispngs.videoplayer.data.SubtitlePosition
 import com.vasilispngs.videoplayer.data.ThemeMode
 import com.vasilispngs.videoplayer.data.Volume
+import com.vasilispngs.videoplayer.data.onMounted
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -35,7 +38,8 @@ class HomeViewModel(
 ) : ViewModel() {
     val volumes: StateFlow<List<Volume>?> = library.volumes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
-    val inProgress: StateFlow<List<Playback>?> = playback.inProgress().stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
+    val inProgress: StateFlow<List<Playback>?> = combine(playback.inProgress(), volumes.filterNotNull()) { rows, mounted -> rows.onMounted(mounted) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
     val settings: StateFlow<PlaybackSettings> = preferences.playback.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), PlaybackSettings())
 

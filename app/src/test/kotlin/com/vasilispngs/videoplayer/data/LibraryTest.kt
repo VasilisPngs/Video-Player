@@ -19,6 +19,16 @@ class LibraryTest {
     private val library = Library(RuntimeEnvironment.getApplication())
 
     @Test
+    fun `keeps videos in progress only on mounted drives`() {
+        val mounted = Volume("USB", Uri.fromFile(File("/storage/1234-ABCD")))
+        val here = Playback(Uri.fromFile(File("/storage/1234-ABCD/Movies/Dune.mkv")).toString(), 1)
+        val unplugged = Playback(Uri.fromFile(File("/storage/5678-EF01/Dune.mkv")).toString(), 1)
+        val similar = Playback(Uri.fromFile(File("/storage/1234-ABCDE/Dune.mkv")).toString(), 1)
+
+        assertEquals(listOf(here), listOf(here, unplugged, similar).onMounted(listOf(mounted)))
+    }
+
+    @Test
     fun `sorts episode numbers as numbers`() {
         assertEquals(
             listOf("s01e01.mkv", "S01E02.mkv", "S01E10.mkv"),

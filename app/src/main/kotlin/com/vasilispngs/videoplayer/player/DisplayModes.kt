@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Display
 import android.view.Window
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
@@ -19,6 +20,7 @@ import kotlin.time.Duration.Companion.seconds
 private const val EXACT_MISMATCH = 0.0002f
 private const val NEAR_MISMATCH = 0.002f
 private val SWITCH_TIMEOUT = 5.seconds
+private val SWITCH_SETTLE = 2.seconds
 
 fun Display.modeFor(frameRate: Float): Display.Mode? {
     val current = mode
@@ -43,9 +45,27 @@ private fun mismatch(refreshRate: Float, frameRate: Float): Float {
     return if (multiple < 1) Float.MAX_VALUE else abs(ratio - multiple) / multiple
 }
 
-suspend fun Window.matchFrameRate(displayManager: DisplayManager, frameRate: Float) {
+suspend fun Window.matchFrameRate(displayManager: DisplayManager, frameRate: Float, onNotice: (CompletableDeferred<Unit>?) -> Unit) {
     val display = decorView.display ?: return
     val target = display.modeFor(frameRate) ?: return
+    if (display.mode.alternativeRefreshRates.any { it == target.refreshRate }) {
+        switchTo(displayManager, display, target)
+    } else {
+        switchWithNotice(onNotice) { switchTo(displayManager, display, target) }
+    }
+}
+
+internal suspend fun switchWithNotice(onNotice: (CompletableDeferred<Unit>?) -> Unit, switch: suspend () -> Boolean) {
+    val skip = CompletableDeferred<Unit>()
+    onNotice(skip)
+    try {
+        if (switch()) withTimeoutOrNull(SWITCH_SETTLE) { skip.await() }
+    } finally {
+        onNotice(null)
+    }
+}
+
+private suspend fun Window.switchTo(displayManager: DisplayManager, display: Display, target: Display.Mode): Boolean =
     coroutineScope {
         val switched = async(start = CoroutineStart.UNDISPATCHED) {
             callbackFlow {
@@ -63,9 +83,10 @@ suspend fun Window.matchFrameRate(displayManager: DisplayManager, frameRate: Flo
             }.first { display.mode.modeId == target.modeId }
         }
         attributes = attributes.apply { preferredDisplayModeId = target.modeId }
-        withTimeoutOrNull(SWITCH_TIMEOUT) { switched.await() } ?: switched.cancel()
+        val done = withTimeoutOrNull(SWITCH_TIMEOUT) { switched.await() } != null
+        if (!done) switched.cancel()
+        done
     }
-}
 
 fun Window.resetDisplayMode() {
     if (attributes.preferredDisplayModeId != 0) attributes = attributes.apply { preferredDisplayModeId = 0 }

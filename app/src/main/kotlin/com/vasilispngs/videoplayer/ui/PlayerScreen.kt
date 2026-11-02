@@ -94,6 +94,7 @@ import com.vasilispngs.videoplayer.player.buildPlayer
 import com.vasilispngs.videoplayer.player.matchFrameRate
 import com.vasilispngs.videoplayer.player.text
 import com.vasilispngs.videoplayer.ui.theme.VideoPlayerTheme
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
@@ -111,13 +112,16 @@ fun PlayerScreen(viewModel: PlayerViewModel, onExit: () -> Unit, onNext: (Uri) -
     val displayManager = remember(context) { context.getSystemService(DisplayManager::class.java) }
     val scope = rememberCoroutineScope()
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
+    var frameRateNotice by remember { mutableStateOf<CompletableDeferred<Unit>?>(null) }
     val failure by viewModel.failure.collectAsStateWithLifecycle()
 
     LifecycleStartEffect(viewModel) {
         val exo = buildPlayer(context, viewModel.delay)
         val session = MediaSession.Builder(context, exo).setId(viewModel.uri.toString()).build()
         player = exo
-        val start = scope.launch { viewModel.start(exo) { frameRate -> window?.matchFrameRate(displayManager, frameRate) } }
+        val start = scope.launch {
+            viewModel.start(exo) { frameRate -> window?.matchFrameRate(displayManager, frameRate) { frameRateNotice = it } }
+        }
         onStopOrDispose {
             start.cancel()
             viewModel.stop(exo)
@@ -129,7 +133,7 @@ fun PlayerScreen(viewModel: PlayerViewModel, onExit: () -> Unit, onNext: (Uri) -
 
     VideoPlayerTheme(darkTheme = true) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.scrim) {
-            player?.let { PlayerContent(player = it, viewModel = viewModel, onExit = onExit, onNext = onNext) }
+            player?.let { PlayerContent(player = it, viewModel = viewModel, frameRateNotice = frameRateNotice, onExit = onExit, onNext = onNext) }
             failure?.let { CenteredMessage(text = stringResource(R.string.playback_failed).withCode(it)) }
         }
     }
@@ -137,7 +141,13 @@ fun PlayerScreen(viewModel: PlayerViewModel, onExit: () -> Unit, onNext: (Uri) -
 
 @kotlin.OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun PlayerContent(player: ExoPlayer, viewModel: PlayerViewModel, onExit: () -> Unit, onNext: (Uri) -> Unit) {
+private fun PlayerContent(
+    player: ExoPlayer,
+    viewModel: PlayerViewModel,
+    frameRateNotice: CompletableDeferred<Unit>?,
+    onExit: () -> Unit,
+    onNext: (Uri) -> Unit
+) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val subtitleDelay by viewModel.subtitleDelayMs.collectAsStateWithLifecycle()
     val playPause = rememberPlayPauseButtonState(player)
@@ -171,7 +181,8 @@ private fun PlayerContent(player: ExoPlayer, viewModel: PlayerViewModel, onExit:
         onDispose { player.removeListener(listener) }
     }
 
-    LaunchedEffect(Unit) { root.requestFocus() }
+    val switching = frameRateNotice != null
+    LaunchedEffect(switching) { if (!switching) root.requestFocus() }
 
     LaunchedEffect(controls, focusControls) {
         if (controls && focusControls) {
@@ -263,6 +274,7 @@ private fun PlayerContent(player: ExoPlayer, viewModel: PlayerViewModel, onExit:
                     .padding(horizontal = TvOverscanHorizontal, vertical = TvOverscanVertical)
             )
         }
+        frameRateNotice?.let { notice -> FrameRateNotice(onPlay = { notice.complete(Unit) }, modifier = Modifier.align(Alignment.Center)) }
         error?.let { CenteredMessage(text = stringResource(R.string.playback_failed).withCode(ErrorCode.Named(it.errorCodeName))) }
     }
 
@@ -466,6 +478,20 @@ private fun NextVideo(name: String, onPlay: () -> Unit, modifier: Modifier = Mod
                 style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Button(onClick = onPlay, shapes = ButtonDefaults.shapes(), modifier = Modifier.focusRequester(focus)) {
+                Text(text = stringResource(R.string.play))
+            }
+        }
+    }
+}
+
+@Composable
+private fun FrameRateNotice(onPlay: () -> Unit, modifier: Modifier = Modifier) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    Surface(modifier = modifier, shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(modifier = Modifier.padding(ContentMargin), verticalArrangement = Arrangement.spacedBy(SmallSpacing)) {
+            Text(text = stringResource(R.string.refresh_rate_changing), style = MaterialTheme.typography.titleMedium)
             Button(onClick = onPlay, shapes = ButtonDefaults.shapes(), modifier = Modifier.focusRequester(focus)) {
                 Text(text = stringResource(R.string.play))
             }
