@@ -375,13 +375,13 @@ private fun BoxScope.Controls(
     ) {
         if (progress.durationMs > 0) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ContentMargin)) {
-                Text(text = elapsed(progress.currentPositionMs), style = MaterialTheme.typography.labelLarge)
+                Text(text = elapsed(progress.currentPositionMs), style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES))
                 LinearWavyProgressIndicator(
                     progress = { progress.currentPositionMs.toFloat() / progress.durationMs },
                     modifier = Modifier.weight(1f),
                     amplitude = { if (playing) 1f else 0f }
                 )
-                Text(text = elapsed(progress.durationMs), style = MaterialTheme.typography.labelLarge)
+                Text(text = elapsed(progress.durationMs), style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES))
             }
         }
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -463,7 +463,7 @@ private fun NextVideo(name: String, onPlay: () -> Unit, modifier: Modifier = Mod
             Text(text = name, style = MaterialTheme.typography.titleMedium)
             Text(
                 text = pluralStringResource(R.plurals.next_video_in, remaining, remaining),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Button(onClick = onPlay, shapes = ButtonDefaults.shapes(), modifier = Modifier.focusRequester(focus)) {

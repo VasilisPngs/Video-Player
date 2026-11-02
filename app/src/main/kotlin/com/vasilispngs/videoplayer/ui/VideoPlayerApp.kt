@@ -129,6 +129,7 @@ private val PredictiveBackEnterFade = Easing {
 private val DialogBlurRadius = 10.dp
 private const val BLURRED_SCRIM_ALPHA = 0.2f
 internal const val SCRIM_ALPHA = 0.32f
+internal const val TABULAR_FIGURES = "tnum"
 
 @Serializable
 sealed interface Screen : NavKey {

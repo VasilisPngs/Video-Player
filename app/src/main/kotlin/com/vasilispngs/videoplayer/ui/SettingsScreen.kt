@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -195,7 +196,10 @@ private fun AppUpdateItem(status: SelfUpdate, onUpdate: () -> Unit) {
     val supporting = @Composable {
         when (status) {
             is SelfUpdate.Downloading -> Column {
-                Text(text = stringResource(R.string.self_update_downloading, (status.progress * 100).roundToInt()))
+                Text(
+                    text = stringResource(R.string.self_update_downloading, (status.progress * 100).roundToInt()),
+                    style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_FIGURES)
+                )
                 LinearWavyProgressIndicator(progress = { status.progress }, modifier = Modifier.fillMaxWidth())
             }
             SelfUpdate.Installing -> Column {

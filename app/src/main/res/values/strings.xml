@@ -25,7 +25,7 @@
     <string name="subtitle_position">Θέση υπότιτλων</string>
     <string name="language_greek">Ελληνικά</string>
     <string name="language_english">Αγγλικά</string>
-    <string name="subtitles_off">Κανένας</string>
+    <string name="subtitles_off">Κανένα</string>
     <string name="position_very_low">Πολύ χαμηλά</string>
     <string name="position_low">Χαμηλά</string>
     <string name="position_higher">Ψηλότερα</string>
@@ -44,8 +44,8 @@
     <string name="app_updated">Η εφαρμογή ενημερώθηκε</string>
     <string name="play">Αναπαραγωγή</string>
     <string name="pause">Παύση</string>
-    <string name="rewind">Πίσω 10 δευτερόλεπτα</string>
-    <string name="fast_forward">Μπροστά 10 δευτερόλεπτα</string>
+    <string name="rewind">Μετάβαση πίσω κατά 10 δευτερόλεπτα</string>
+    <string name="fast_forward">Μετάβαση εμπρός κατά 10 δευτερόλεπτα</string>
     <string name="audio">Ήχος</string>
     <string name="subtitles">Υπότιτλοι</string>
     <string name="subtitle_sync">Συγχρονισμός υπότιτλων</string>
