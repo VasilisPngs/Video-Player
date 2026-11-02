@@ -153,7 +153,7 @@ fun VideoPlayerApp(viewModel: HomeViewModel, themeMode: ThemeMode, modifier: Mod
     val container = remember(context) { context.appContainer }
     val window = LocalActivity.current?.window
     val playing = backStack.last() is Screen.Player
-    LaunchedEffect(playing) { if (!playing) window?.resetDisplayMode() }
+    SideEffect(playing) { if (!playing) window?.resetDisplayMode() }
     val updateConfirmation by viewModel.updateConfirmation.collectAsStateWithLifecycle()
     updateConfirmation?.let { confirmation ->
         SideEffect(confirmation) {
