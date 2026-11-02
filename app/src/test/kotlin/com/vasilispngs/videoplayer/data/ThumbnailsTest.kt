@@ -1,10 +1,10 @@
 package com.vasilispngs.videoplayer.data
 
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Size
+import androidx.core.graphics.createBitmap
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -70,7 +70,7 @@ class ThumbnailsTest {
         ShadowMediaMetadataRetriever.addMetadata(source, MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH, "$VIDEO_WIDTH")
         ShadowMediaMetadataRetriever.addMetadata(source, MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT, "$VIDEO_HEIGHT")
         ShadowMediaMetadataRetriever.addMetadata(source, MediaMetadataRetriever.METADATA_KEY_DURATION, "$DURATION_MS")
-        val frame = Bitmap.createBitmap(VIDEO_WIDTH, VIDEO_HEIGHT, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
+        val frame = createBitmap(VIDEO_WIDTH, VIDEO_HEIGHT).apply { eraseColor(Color.RED) }
         ShadowMediaMetadataRetriever.addFrame(source, MIDDLE_US, frame)
     }
 

@@ -1,11 +1,13 @@
 package com.vasilispngs.videoplayer.player
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DisplayModesTest {
     @Test
     fun `switches a 60 Hz television to the exact rate of a film`() {
@@ -42,7 +44,7 @@ class DisplayModesTest {
     fun `shows the notice through the switch and two seconds after it`() = runTest {
         val events = mutableListOf<String>()
 
-        switchWithNotice({ events += "${if (it == null) "hide" else "show"} ${currentTime}" }) { true.also { events += "switch ${currentTime}" } }
+        switchWithNotice({ events += "${if (it == null) "hide" else "show"} $currentTime" }) { true.also { events += "switch $currentTime" } }
 
         assertEquals(listOf("show 0", "switch 0", "hide 2000"), events)
     }
@@ -53,8 +55,8 @@ class DisplayModesTest {
 
         switchWithNotice({ notice ->
             notice?.complete(Unit)
-            events += "${if (notice == null) "hide" else "show"} ${currentTime}"
-        }) { true.also { events += "switch ${currentTime}" } }
+            events += "${if (notice == null) "hide" else "show"} $currentTime"
+        }) { true.also { events += "switch $currentTime" } }
 
         assertEquals(listOf("show 0", "switch 0", "hide 0"), events)
     }
@@ -63,7 +65,7 @@ class DisplayModesTest {
     fun `plays at once when the television keeps its mode`() = runTest {
         val events = mutableListOf<String>()
 
-        switchWithNotice({ events += "${if (it == null) "hide" else "show"} ${currentTime}" }) { false.also { events += "switch ${currentTime}" } }
+        switchWithNotice({ events += "${if (it == null) "hide" else "show"} $currentTime" }) { false.also { events += "switch $currentTime" } }
 
         assertEquals(listOf("show 0", "switch 0", "hide 0"), events)
     }

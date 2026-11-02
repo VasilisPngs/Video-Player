@@ -13,7 +13,7 @@
     <string name="usb_empty">Συνδέστε μια μονάδα USB</string>
     <string name="all_files_access">Πρόσβαση σε όλα τα αρχεία</string>
     <string name="all_files_access_description">Χρειάζεται για τα αρχεία του USB. Από τον υπολογιστή: %1$s</string>
-    <string name="all_files_access_command" translatable="false" tools:ignore="TypographyDashes">adb shell appops set --uid %1$s MANAGE_EXTERNAL_STORAGE allow</string>
+    <string name="all_files_access_command" translatable="false">adb shell appops set --uid %1$s MANAGE_EXTERNAL_STORAGE allow</string>
     <string name="folder_empty">Ο φάκελος είναι κενός</string>
     <string name="folder_failed">Δεν ήταν δυνατό το άνοιγμα του φακέλου</string>
     <string name="playback">Αναπαραγωγή</string>
