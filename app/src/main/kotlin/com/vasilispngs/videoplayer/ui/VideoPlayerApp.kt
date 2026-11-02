@@ -2,7 +2,6 @@ package com.vasilispngs.videoplayer.ui
 
 import android.content.Context
 import android.content.pm.PackageManager
-import androidx.activity.compose.LocalActivity
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
@@ -78,6 +77,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalWindow
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.isCrossWindowBlurEnabled
 import androidx.compose.ui.res.painterResource
@@ -151,7 +151,7 @@ fun VideoPlayerApp(viewModel: HomeViewModel, themeMode: ThemeMode, modifier: Mod
     val backStack = rememberSerializable(serializer = serializer()) { NavBackStack<Screen>(Screen.Home) }
     val context = LocalContext.current
     val container = remember(context) { context.appContainer }
-    val window = LocalActivity.current?.window
+    val window = LocalWindow.current
     val playing = backStack.last() is Screen.Player
     SideEffect(playing) { if (!playing) window?.resetDisplayMode() }
     val updateConfirmation by viewModel.updateConfirmation.collectAsStateWithLifecycle()

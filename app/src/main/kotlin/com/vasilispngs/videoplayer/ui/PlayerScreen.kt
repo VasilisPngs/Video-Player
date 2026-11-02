@@ -6,7 +6,6 @@ import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.text.format.DateUtils
 import android.view.accessibility.CaptioningManager
-import androidx.activity.compose.LocalActivity
 import androidx.annotation.DrawableRes
 import androidx.annotation.OptIn
 import androidx.annotation.StringRes
@@ -59,6 +58,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.keepScreenOn
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalWindow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -108,7 +108,7 @@ private enum class Menu { Audio, Subtitles }
 @Composable
 fun PlayerScreen(viewModel: PlayerViewModel, onExit: () -> Unit, onNext: (Uri) -> Unit) {
     val context = LocalContext.current
-    val window = LocalActivity.current?.window
+    val window = LocalWindow.current
     val displayManager = remember(context) { context.getSystemService(DisplayManager::class.java) }
     val scope = rememberCoroutineScope()
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
