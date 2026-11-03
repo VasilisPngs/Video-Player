@@ -7,6 +7,8 @@ import android.net.Uri
 import android.os.Environment
 import android.os.storage.StorageManager
 import android.os.storage.StorageVolume
+import androidx.core.net.toFile
+import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -56,14 +58,14 @@ class Library(private val context: Context) {
     }.conflate()
 
     suspend fun list(folder: Uri): List<Entry> = withContext(Dispatchers.IO) {
-        val files = File(folder.requirePath()).listFiles() ?: throw IOException(folder.toString())
+        val files = folder.toFile().listFiles() ?: throw IOException(folder.toString())
         files.filterNot(File::isHidden).map { Entry(it.name, Uri.fromFile(it), kindOf(it.name, it.isDirectory), it.length()) }
     }.sortedWith(entryOrder)
 
-    suspend fun size(uri: Uri): Long = withContext(Dispatchers.IO) { File(uri.requirePath()).length() }
+    suspend fun size(uri: Uri): Long = withContext(Dispatchers.IO) { uri.toFile().length() }
 
     suspend fun head(uri: Uri, bytes: Int): ByteArray = withContext(Dispatchers.IO) {
-        File(uri.requirePath()).inputStream().use { it.readNBytes(bytes) }
+        uri.toFile().inputStream().use { it.readNBytes(bytes) }
     }
 
     private fun StorageVolume.toVolume(): Volume? {
@@ -74,9 +76,7 @@ class Library(private val context: Context) {
 }
 
 val Uri.parent: Uri
-    get() = buildUpon().path(pathSegments.dropLast(1).joinToString("/", prefix = "/")).build()
+    get() = checkNotNull(toFile().parentFile).toUri()
 
 val Uri.fileName: String
     get() = lastPathSegment.orEmpty()
-
-private fun Uri.requirePath(): String = path ?: throw IOException(toString())

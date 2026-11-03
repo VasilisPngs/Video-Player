@@ -47,5 +47,5 @@ suspend fun Library.externalSubtitles(video: String, siblings: List<Entry>): Lis
 internal fun isGreek(bytes: ByteArray): Boolean {
     val charset = SubtitleCharsetDetector.detect(bytes, 0, bytes.size) ?: Charsets.UTF_8
     val letters = String(bytes, charset).filter(Char::isLetter)
-    return letters.count { it in '\u0370'..'\u03FF' || it in '\u1F00'..'\u1FFF' } * 2 > letters.length
+    return letters.count { Character.UnicodeScript.of(it.code) == Character.UnicodeScript.GREEK } * 2 > letters.length
 }
