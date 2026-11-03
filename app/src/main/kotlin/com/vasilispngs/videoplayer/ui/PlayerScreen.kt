@@ -9,6 +9,9 @@ import android.view.accessibility.CaptioningManager
 import androidx.annotation.DrawableRes
 import androidx.annotation.OptIn
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -64,6 +67,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -211,6 +215,8 @@ private fun PlayerContent(
             .focusRequester(root)
             .focusable()
             .onKeyEvent { event ->
+                val seek = event.key == Key.DirectionLeft || event.key == Key.DirectionRight
+                if (event.type == KeyEventType.KeyUp && seek) player.isScrubbingModeEnabled = false
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 interactions++
                 if (!rootFocused) return@onKeyEvent false
@@ -219,12 +225,9 @@ private fun PlayerContent(
                         Util.handlePlayPauseButtonAction(player)
                         controls = !player.playWhenReady
                     }
-                    Key.DirectionLeft -> {
-                        player.seekBack()
-                        controls = true
-                    }
-                    Key.DirectionRight -> {
-                        player.seekForward()
+                    Key.DirectionLeft, Key.DirectionRight -> {
+                        if (event.nativeKeyEvent.repeatCount > 0) player.isScrubbingModeEnabled = true
+                        if (event.key == Key.DirectionLeft) player.seekBack() else player.seekForward()
                         controls = true
                     }
                     Key.DirectionUp, Key.DirectionDown -> {
@@ -243,14 +246,22 @@ private fun PlayerContent(
             subtitles = { Subtitles(player = player) }
         )
         if (playPause.showBuffering) LoadingIndicator(modifier = Modifier.align(Alignment.Center))
-        if (controls) {
-            Controls(
-                player = player,
-                playing = playing,
-                playFocus = playFocus,
-                onAudio = { menu = Menu.Audio },
-                onSubtitles = { menu = Menu.Subtitles }
-            )
+        AnimatedVisibility(
+            visible = controls,
+            modifier = Modifier.matchParentSize(),
+            enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+            exit = fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Controls(
+                    player = player,
+                    title = viewModel.uri.fileName,
+                    playing = playing,
+                    playFocus = playFocus,
+                    onAudio = { menu = Menu.Audio },
+                    onSubtitles = { menu = Menu.Subtitles }
+                )
+            }
         }
         if (syncing) {
             SubtitleSync(
@@ -356,6 +367,7 @@ private fun Subtitles(player: Player) {
 @Composable
 private fun BoxScope.Controls(
     player: Player,
+    title: String,
     playing: Boolean,
     playFocus: FocusRequester,
     onAudio: () -> Unit,
@@ -371,6 +383,7 @@ private fun BoxScope.Controls(
             .padding(horizontal = TvOverscanHorizontal, vertical = TvOverscanVertical),
         verticalArrangement = Arrangement.spacedBy(ContentMargin)
     ) {
+        Text(text = title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (progress.durationMs > 0) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ContentMargin)) {
                 Text(text = elapsed(progress.currentPositionMs), style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES))
