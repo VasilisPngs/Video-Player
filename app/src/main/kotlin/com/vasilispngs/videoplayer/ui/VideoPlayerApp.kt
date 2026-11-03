@@ -48,6 +48,7 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.ScrimDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
@@ -128,7 +129,6 @@ private val PredictiveBackEnterFade = Easing {
 }
 private val DialogBlurRadius = 10.dp
 private const val BLURRED_SCRIM_ALPHA = 0.2f
-internal const val SCRIM_ALPHA = 0.32f
 internal const val TABULAR_FIGURES = "tnum"
 
 @Serializable
@@ -365,7 +365,7 @@ internal fun <T> OptionDialog(
 @Composable
 internal fun dialogProperties() = DialogProperties(
     blurBehindRadius = DialogBlurRadius,
-    scrimAlpha = if (LocalWindowInfo.current.isCrossWindowBlurEnabled) BLURRED_SCRIM_ALPHA else SCRIM_ALPHA
+    scrimAlpha = if (LocalWindowInfo.current.isCrossWindowBlurEnabled) BLURRED_SCRIM_ALPHA else ScrimDefaults.color.alpha
 )
 
 @Composable

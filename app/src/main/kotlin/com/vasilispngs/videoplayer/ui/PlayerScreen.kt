@@ -9,7 +9,6 @@ import android.view.accessibility.CaptioningManager
 import androidx.annotation.DrawableRes
 import androidx.annotation.OptIn
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
@@ -31,6 +31,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scrim
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,7 +69,6 @@ import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
-import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.ExoPlayer
@@ -79,6 +79,7 @@ import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
+import androidx.media3.ui.compose.state.rememberCuesState
 import androidx.media3.ui.compose.state.rememberErrorState
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import androidx.media3.ui.compose.state.rememberProgressStateWithTickInterval
@@ -340,22 +341,14 @@ private fun Subtitles(player: Player) {
         captioning.addCaptioningChangeListener(listener)
         onDispose { captioning.removeCaptioningChangeListener(listener) }
     }
-    DisposableEffect(player, view) {
-        val listener = object : Player.Listener {
-            override fun onCues(cueGroup: CueGroup) {
-                view.setCues(cueGroup.cues)
-            }
-        }
-        player.addListener(listener)
-        view.setCues(player.currentCues.cues)
-        onDispose { player.removeListener(listener) }
-    }
+    val cues = rememberCuesState(player).cues
     AndroidView(
         factory = { view },
         modifier = Modifier.fillMaxSize(),
         update = {
             it.setStyle(CaptionStyleCompat.createFromCaptionStyle(style))
             it.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * scale)
+            it.setCues(cues)
         }
     )
 }
@@ -370,11 +363,7 @@ private fun BoxScope.Controls(
 ) {
     val progress = rememberProgressStateWithTickInterval(player, PROGRESS_TICK_MS)
     val playPause = rememberPlayPauseButtonState(player)
-    Box(
-        modifier = Modifier
-            .matchParentSize()
-            .background(MaterialTheme.colorScheme.scrim.copy(alpha = SCRIM_ALPHA))
-    )
+    Scrim(contentDescription = null, modifier = Modifier.matchParentSize(), onClick = null)
     Column(
         modifier = Modifier
             .align(Alignment.BottomCenter)
@@ -466,7 +455,7 @@ private fun NextVideo(name: String, onPlay: () -> Unit, modifier: Modifier = Mod
         }
         play()
     }
-    Surface(modifier = modifier, shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+    Card(modifier = modifier) {
         Column(modifier = Modifier.padding(ContentMargin), verticalArrangement = Arrangement.spacedBy(SmallSpacing)) {
             Text(text = stringResource(R.string.next_video), style = MaterialTheme.typography.labelLarge)
             Text(text = name, style = MaterialTheme.typography.titleMedium)
@@ -486,7 +475,7 @@ private fun NextVideo(name: String, onPlay: () -> Unit, modifier: Modifier = Mod
 private fun FrameRateNotice(onPlay: () -> Unit, modifier: Modifier = Modifier) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    Surface(modifier = modifier, shape = MaterialTheme.shapes.extraLarge, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+    Card(modifier = modifier) {
         Column(modifier = Modifier.padding(ContentMargin), verticalArrangement = Arrangement.spacedBy(SmallSpacing)) {
             Text(text = stringResource(R.string.refresh_rate_changing), style = MaterialTheme.typography.titleMedium)
             Button(onClick = onPlay, shapes = ButtonDefaults.shapes(), modifier = Modifier.focusRequester(focus)) {
