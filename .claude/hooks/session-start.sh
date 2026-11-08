@@ -9,7 +9,7 @@ cd "$CLAUDE_PROJECT_DIR"
 exec 9>/tmp/android-toolchain.lock
 flock 9
 
-jdk_feature=$(grep -oP "java-version: '\K[0-9]+" .github/workflows/release.yml | sort -n | tail -1)
+jdk_feature=$(grep -oP "java-version: '\K[0-9]+" .github/workflows/release.yml)
 java_home=/opt/jdk$jdk_feature
 android_home=/opt/android-sdk
 android_cli=$HOME/.local/bin/android

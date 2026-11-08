@@ -1,6 +1,5 @@
 package com.vasilispngs.videoplayer.ui
 
-import android.content.Context
 import android.content.pm.PackageManager
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -217,7 +216,7 @@ internal fun ListScreen(
         CompactMargin
     }
     val context = LocalContext.current
-    val television = remember(context) { context.isTelevision }
+    val television = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
     val overscan = if (television) {
         WindowInsets(TvOverscanHorizontal, TvOverscanVertical, TvOverscanHorizontal, TvOverscanVertical)
     } else {
@@ -387,9 +386,6 @@ internal fun String.withCode(code: ErrorCode?): String {
         )
     } ?: this
 }
-
-internal val Context.isTelevision: Boolean
-    get() = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
 
 private fun AnimatedContentTransitionScope<*>.forwardTransition(motion: MotionScheme, distance: Int) =
     (slideIntoContainer(SlideDirection.Start, motion.defaultSpatialSpec()) { it.sign * distance } + fadeIn(motion.fastEffectsSpec()))

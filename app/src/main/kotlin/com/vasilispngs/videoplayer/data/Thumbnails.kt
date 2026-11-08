@@ -10,6 +10,7 @@ import android.util.LruCache
 import android.util.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.net.toFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -32,7 +33,7 @@ class Thumbnails(context: Context) {
     fun cached(video: Uri, size: Size): ImageBitmap? = memory[memoryKey(video, size)]
 
     suspend fun load(video: Uri, size: Size): ImageBitmap? = withContext(Dispatchers.IO) {
-        val file = video.path?.let(::File)?.takeIf(File::isFile) ?: return@withContext null
+        val file = video.toFile().takeIf(File::isFile) ?: return@withContext null
         val stored = File(folder, UUID.nameUUIDFromBytes("${file.path}|${file.length()}|${file.lastModified()}|$size".encodeToByteArray()).toString())
         val bitmap = if (stored.exists()) {
             read(stored)
