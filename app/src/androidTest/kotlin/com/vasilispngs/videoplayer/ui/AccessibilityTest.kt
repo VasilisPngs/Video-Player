@@ -65,7 +65,6 @@ class AccessibilityTest {
                 settings = PlaybackSettings(),
                 themeMode = ThemeMode.System,
                 selfUpdate = SelfUpdate.Downloading(DOWNLOADED),
-                onBack = {},
                 onUpdateApp = {},
                 onAudioLanguage = {},
                 onSubtitleLanguage = {},
@@ -117,7 +116,7 @@ class AccessibilityTest {
     }
 
     private fun showFolder(listing: Listing) = show {
-        FolderContent(title = "SanDisk", listing = listing, thumbnails = thumbnails, onOpen = {}, onBack = {})
+        FolderContent(title = "SanDisk", listing = listing, thumbnails = thumbnails, onOpen = {})
     }
 
     private fun show(content: @Composable () -> Unit) {

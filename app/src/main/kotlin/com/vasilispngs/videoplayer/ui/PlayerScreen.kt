@@ -12,32 +12,20 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.HorizontalFloatingToolbar
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scrim
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -52,8 +40,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -66,8 +57,10 @@ import androidx.compose.ui.platform.LocalWindow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,6 +83,17 @@ import androidx.media3.ui.compose.state.rememberProgressStateWithTickInterval
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import androidx.tv.material3.Button
+import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.Icon
+import androidx.tv.material3.IconButton
+import androidx.tv.material3.IconButtonDefaults
+import androidx.tv.material3.ListItem
+import androidx.tv.material3.LocalContentColor
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
+import androidx.tv.material3.Text
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.data.ErrorCode
 import com.vasilispngs.videoplayer.data.fileName
@@ -106,6 +110,9 @@ import kotlin.time.Duration.Companion.seconds
 
 private const val NEXT_COUNTDOWN_SECONDS = 10
 private const val PROGRESS_TICK_MS = 1_000L
+private const val PANEL_FRACTION = 0.32f
+private const val PROGRESS_TRACK_ALPHA = 0.24f
+private val ProgressHeight = 4.dp
 
 private enum class Menu { Audio, Subtitles }
 
@@ -136,14 +143,16 @@ fun PlayerScreen(viewModel: PlayerViewModel, onExit: () -> Unit, onNext: (Uri) -
     }
 
     VideoPlayerTheme(darkTheme = true) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.scrim) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            colors = SurfaceDefaults.colors(containerColor = MaterialTheme.colorScheme.scrim, contentColor = MaterialTheme.colorScheme.onSurface)
+        ) {
             player?.let { PlayerContent(player = it, viewModel = viewModel, frameRateNotice = frameRateNotice, onExit = onExit, onNext = onNext) }
-            failure?.let { CenteredMessage(text = stringResource(R.string.playback_failed).withCode(it)) }
+            failure?.let { Message(text = stringResource(R.string.playback_failed).withCode(it)) }
         }
     }
 }
 
-@kotlin.OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun PlayerContent(
     player: ExoPlayer,
@@ -165,11 +174,18 @@ private fun PlayerContent(
     var rootFocused by remember { mutableStateOf(false) }
     val root = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
+    val audioFocus = remember { FocusRequester() }
+    val subtitlesFocus = remember { FocusRequester() }
     val playing = !playPause.showPlay
     val hide = {
         root.requestFocus()
         controls = false
         syncing = false
+    }
+    val closeMenu: () -> Unit = {
+        val opener = if (menu == Menu.Audio) audioFocus else subtitlesFocus
+        menu = null
+        opener.requestFocus()
     }
 
     DisposableEffect(player) {
@@ -203,8 +219,8 @@ private fun PlayerContent(
 
     NavigationBackHandler(
         state = rememberNavigationEventState(NavigationEventInfo.None),
-        isBackEnabled = controls || syncing,
-        onBackCompleted = hide
+        isBackEnabled = controls || syncing || menu != null,
+        onBackCompleted = { if (menu != null) closeMenu() else hide() }
     )
 
     Box(
@@ -245,12 +261,11 @@ private fun PlayerContent(
             surfaceType = SURFACE_TYPE_SURFACE_VIEW,
             subtitles = { Subtitles(player = player) }
         )
-        if (playPause.showBuffering) LoadingIndicator(modifier = Modifier.align(Alignment.Center))
         AnimatedVisibility(
             visible = controls,
             modifier = Modifier.matchParentSize(),
-            enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
-            exit = fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
+            enter = fadeIn(),
+            exit = fadeOut()
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 Controls(
@@ -258,6 +273,8 @@ private fun PlayerContent(
                     title = viewModel.uri.fileName,
                     playing = playing,
                     playFocus = playFocus,
+                    audioFocus = audioFocus,
+                    subtitlesFocus = subtitlesFocus,
                     onAudio = { menu = Menu.Audio },
                     onSubtitles = { menu = Menu.Subtitles }
                 )
@@ -284,51 +301,77 @@ private fun PlayerContent(
                     .padding(horizontal = TvOverscanHorizontal, vertical = TvOverscanVertical)
             )
         }
-        frameRateNotice?.let { notice -> FrameRateNotice(onPlay = { notice.complete(Unit) }, modifier = Modifier.align(Alignment.Center)) }
-        error?.let { CenteredMessage(text = stringResource(R.string.playback_failed).withCode(ErrorCode.Named(it.errorCodeName))) }
-    }
-
-    val tracks = remember(menu) { player.currentTracks }
-    when (menu) {
-        Menu.Audio -> OptionDialog<Tracks.Group?>(
-            title = stringResource(R.string.audio),
-            options = tracks.audio,
-            current = tracks.audio.firstOrNull(Tracks.Group::isSelected),
-            label = { group -> group?.let { trackName(it) }.orEmpty() },
-            onDismiss = { menu = null },
-            onSelect = { group ->
-                menu = null
-                group?.let { viewModel.chooseAudio(player, it) }
-            }
-        )
-        Menu.Subtitles -> {
-            val current = tracks.text.firstOrNull(Tracks.Group::isSelected)
-            OptionDialog<Tracks.Group?>(
-                title = stringResource(R.string.subtitles),
-                options = listOf(null) + tracks.text,
-                current = current,
-                label = { group -> group?.let { trackName(it) } ?: stringResource(R.string.subtitles_off) },
-                onDismiss = { menu = null },
-                onSelect = {
-                    menu = null
-                    viewModel.chooseText(player, it)
-                },
-                extraButton = {
-                    TextButton(
-                        onClick = {
-                            menu = null
-                            controls = false
-                            syncing = true
+        menu?.let { open ->
+            val tracks = remember(open) { player.currentTracks }
+            TrackPanel(
+                title = stringResource(if (open == Menu.Audio) R.string.audio else R.string.subtitles),
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) { focus ->
+                when (open) {
+                    Menu.Audio -> OptionList<Tracks.Group?>(
+                        options = tracks.audio,
+                        current = tracks.audio.firstOrNull(Tracks.Group::isSelected),
+                        label = { group -> group?.let { trackName(it) }.orEmpty() },
+                        onSelect = { group ->
+                            closeMenu()
+                            group?.let { viewModel.chooseAudio(player, it) }
                         },
-                        enabled = current != null,
-                        shapes = ButtonDefaults.shapes()
-                    ) {
-                        Text(text = stringResource(R.string.subtitle_sync))
+                        currentFocus = focus
+                    )
+                    Menu.Subtitles -> {
+                        val current = tracks.text.firstOrNull(Tracks.Group::isSelected)
+                        OptionList<Tracks.Group?>(
+                            options = listOf(null) + tracks.text,
+                            current = current,
+                            label = { group -> group?.let { trackName(it) } ?: stringResource(R.string.subtitles_off) },
+                            onSelect = {
+                                closeMenu()
+                                viewModel.chooseText(player, it)
+                            },
+                            currentFocus = focus,
+                            footer = {
+                                ListItem(
+                                    selected = false,
+                                    onClick = {
+                                        menu = null
+                                        controls = false
+                                        syncing = true
+                                    },
+                                    enabled = current != null,
+                                    headlineContent = { Text(text = stringResource(R.string.subtitle_sync)) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        )
                     }
                 }
-            )
+            }
         }
-        null -> Unit
+        frameRateNotice?.let { notice -> FrameRateNotice(onPlay = { notice.complete(Unit) }, modifier = Modifier.align(Alignment.Center)) }
+        error?.let { Message(text = stringResource(R.string.playback_failed).withCode(ErrorCode.Named(it.errorCodeName))) }
+    }
+}
+
+@Composable
+private fun TrackPanel(title: String, modifier: Modifier = Modifier, content: @Composable (FocusRequester) -> Unit) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    Surface(
+        modifier = modifier
+            .fillMaxHeight()
+            .fillMaxWidth(PANEL_FRACTION)
+            .focusProperties { onExit = { cancelFocusChange() } }
+    ) {
+        Column(modifier = Modifier.padding(start = TvGutter, top = TvOverscanVertical, end = TvListPadding)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier
+                    .padding(horizontal = TvOverscanHorizontal - TvListPadding)
+                    .semantics { heading() }
+            )
+            content(focus)
+        }
     }
 }
 
@@ -370,27 +413,32 @@ private fun BoxScope.Controls(
     title: String,
     playing: Boolean,
     playFocus: FocusRequester,
+    audioFocus: FocusRequester,
+    subtitlesFocus: FocusRequester,
     onAudio: () -> Unit,
     onSubtitles: () -> Unit
 ) {
     val progress = rememberProgressStateWithTickInterval(player, PROGRESS_TICK_MS)
     val playPause = rememberPlayPauseButtonState(player)
-    Scrim(contentDescription = null, modifier = Modifier.matchParentSize(), onClick = null)
+    Box(
+        modifier = Modifier
+            .matchParentSize()
+            .background(CardDefaults.ScrimBrush)
+    )
     Column(
         modifier = Modifier
             .align(Alignment.BottomCenter)
             .fillMaxWidth()
             .padding(horizontal = TvOverscanHorizontal, vertical = TvOverscanVertical),
-        verticalArrangement = Arrangement.spacedBy(ContentMargin)
+        verticalArrangement = Arrangement.spacedBy(TvGutter)
     ) {
         Text(text = title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (progress.durationMs > 0) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ContentMargin)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(TvGutter)) {
                 Text(text = elapsed(progress.currentPositionMs), style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES))
-                LinearWavyProgressIndicator(
+                ProgressLine(
                     progress = { progress.currentPositionMs.toFloat() / progress.durationMs },
-                    modifier = Modifier.weight(1f),
-                    amplitude = { if (playing) 1f else 0f }
+                    modifier = Modifier.weight(1f)
                 )
                 Text(text = elapsed(progress.durationMs), style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES))
             }
@@ -398,37 +446,63 @@ private fun BoxScope.Controls(
         Box(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.align(Alignment.Center),
-                horizontalArrangement = Arrangement.spacedBy(ContentMargin),
+                horizontalArrangement = Arrangement.spacedBy(TvGutter),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ControlButton(icon = R.drawable.ic_replay_10, label = R.string.rewind, onClick = player::seekBack)
-                FilledIconButton(
+                IconButton(
                     onClick = playPause::onClick,
-                    shapes = IconButtonDefaults.shapes(IconButtonDefaults.mediumRoundShape, IconButtonDefaults.mediumPressedShape),
                     modifier = Modifier
-                        .size(IconButtonDefaults.mediumContainerSize())
+                        .size(IconButtonDefaults.LargeButtonSize)
                         .focusRequester(playFocus),
                     enabled = playPause.isEnabled
                 ) {
                     Icon(
                         painter = painterResource(if (playPause.showPlay) R.drawable.ic_play else R.drawable.ic_pause),
                         contentDescription = stringResource(if (playPause.showPlay) R.string.play else R.string.pause),
-                        modifier = Modifier.size(IconButtonDefaults.mediumIconSize)
+                        modifier = Modifier.size(IconButtonDefaults.LargeIconSize)
                     )
                 }
                 ControlButton(icon = R.drawable.ic_forward_10, label = R.string.fast_forward, onClick = player::seekForward)
             }
-            Row(modifier = Modifier.align(Alignment.CenterEnd), horizontalArrangement = Arrangement.spacedBy(SmallSpacing)) {
-                ControlButton(icon = R.drawable.ic_audiotrack, label = R.string.audio, onClick = onAudio)
-                ControlButton(icon = R.drawable.ic_subtitles, label = R.string.subtitles, onClick = onSubtitles)
+            Row(modifier = Modifier.align(Alignment.CenterEnd), horizontalArrangement = Arrangement.spacedBy(TvGutter)) {
+                ControlButton(icon = R.drawable.ic_audiotrack, label = R.string.audio, onClick = onAudio, modifier = Modifier.focusRequester(audioFocus))
+                ControlButton(
+                    icon = R.drawable.ic_subtitles,
+                    label = R.string.subtitles,
+                    onClick = onSubtitles,
+                    modifier = Modifier.focusRequester(subtitlesFocus)
+                )
             }
         }
     }
 }
 
 @Composable
+private fun ProgressLine(progress: () -> Float, modifier: Modifier = Modifier) {
+    val color = LocalContentColor.current
+    Canvas(modifier = modifier.height(ProgressHeight)) {
+        val y = size.height / 2
+        drawLine(
+            color = color.copy(alpha = PROGRESS_TRACK_ALPHA),
+            start = Offset(0f, y),
+            end = Offset(size.width, y),
+            strokeWidth = size.height,
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = color,
+            start = Offset(0f, y),
+            end = Offset(size.width * progress().coerceIn(0f, 1f), y),
+            strokeWidth = size.height,
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+@Composable
 private fun ControlButton(@DrawableRes icon: Int, @StringRes label: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    FilledTonalIconButton(onClick = onClick, shapes = IconButtonDefaults.shapes(), modifier = modifier) {
+    IconButton(onClick = onClick, modifier = modifier) {
         Icon(painter = painterResource(icon), contentDescription = stringResource(label))
     }
 }
@@ -437,21 +511,24 @@ private fun ControlButton(@DrawableRes icon: Int, @StringRes label: Int, onClick
 private fun SubtitleSync(delayMs: Long, onShift: (later: Boolean) -> Unit, modifier: Modifier = Modifier) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    HorizontalFloatingToolbar(expanded = true, modifier = modifier) {
-        ControlButton(icon = R.drawable.ic_remove, label = R.string.subtitle_sync_earlier, onClick = { onShift(false) })
-        Column(
-            modifier = Modifier.padding(horizontal = ContentMargin),
-            horizontalAlignment = Alignment.CenterHorizontally
+    Surface(modifier = modifier, shape = MaterialTheme.shapes.extraLarge) {
+        Row(
+            modifier = Modifier.padding(TvGutter),
+            horizontalArrangement = Arrangement.spacedBy(TvGutter),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = stringResource(R.string.subtitle_sync), style = MaterialTheme.typography.labelLarge)
-            Text(text = stringResource(R.string.subtitle_sync_value, delayMs / 1000f), style = MaterialTheme.typography.titleMedium)
+            ControlButton(icon = R.drawable.ic_remove, label = R.string.subtitle_sync_earlier, onClick = { onShift(false) })
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = stringResource(R.string.subtitle_sync), style = MaterialTheme.typography.labelLarge)
+                Text(text = stringResource(R.string.subtitle_sync_value, delayMs / 1000f), style = MaterialTheme.typography.titleMedium)
+            }
+            ControlButton(
+                icon = R.drawable.ic_add,
+                label = R.string.subtitle_sync_later,
+                onClick = { onShift(true) },
+                modifier = Modifier.focusRequester(focus)
+            )
         }
-        ControlButton(
-            icon = R.drawable.ic_add,
-            label = R.string.subtitle_sync_later,
-            onClick = { onShift(true) },
-            modifier = Modifier.focusRequester(focus)
-        )
     }
 }
 
@@ -468,8 +545,8 @@ private fun NextVideo(name: String, onPlay: () -> Unit, modifier: Modifier = Mod
         }
         play()
     }
-    Card(modifier = modifier) {
-        Column(modifier = Modifier.padding(ContentMargin), verticalArrangement = Arrangement.spacedBy(SmallSpacing)) {
+    Surface(modifier = modifier, shape = MaterialTheme.shapes.medium) {
+        Column(modifier = Modifier.padding(TvGutter), verticalArrangement = Arrangement.spacedBy(TvLineSpacing)) {
             Text(text = stringResource(R.string.next_video), style = MaterialTheme.typography.labelLarge)
             Text(text = name, style = MaterialTheme.typography.titleMedium)
             Text(
@@ -477,7 +554,7 @@ private fun NextVideo(name: String, onPlay: () -> Unit, modifier: Modifier = Mod
                 style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Button(onClick = onPlay, shapes = ButtonDefaults.shapes(), modifier = Modifier.focusRequester(focus)) {
+            Button(onClick = onPlay, modifier = Modifier.focusRequester(focus)) {
                 Text(text = stringResource(R.string.play))
             }
         }
@@ -488,20 +565,13 @@ private fun NextVideo(name: String, onPlay: () -> Unit, modifier: Modifier = Mod
 private fun FrameRateNotice(onPlay: () -> Unit, modifier: Modifier = Modifier) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    Card(modifier = modifier) {
-        Column(modifier = Modifier.padding(ContentMargin), verticalArrangement = Arrangement.spacedBy(SmallSpacing)) {
+    Surface(modifier = modifier, shape = MaterialTheme.shapes.medium) {
+        Column(modifier = Modifier.padding(TvGutter), verticalArrangement = Arrangement.spacedBy(TvLineSpacing)) {
             Text(text = stringResource(R.string.refresh_rate_changing), style = MaterialTheme.typography.titleMedium)
-            Button(onClick = onPlay, shapes = ButtonDefaults.shapes(), modifier = Modifier.focusRequester(focus)) {
+            Button(onClick = onPlay, modifier = Modifier.focusRequester(focus)) {
                 Text(text = stringResource(R.string.play))
             }
         }
-    }
-}
-
-@Composable
-private fun CenteredMessage(text: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = text, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
     }
 }
 
@@ -515,4 +585,3 @@ private fun trackName(group: Tracks.Group): String {
 }
 
 private fun elapsed(milliseconds: Long): String = DateUtils.formatElapsedTime(milliseconds.coerceAtLeast(0) / 1000)
-

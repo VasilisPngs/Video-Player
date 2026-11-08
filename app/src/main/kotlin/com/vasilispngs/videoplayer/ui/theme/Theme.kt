@@ -2,30 +2,50 @@ package com.vasilispngs.videoplayer.ui.theme
 
 import android.app.UiModeManager
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialExpressiveTheme
-import androidx.compose.material3.MotionScheme
-import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Typography
+import androidx.tv.material3.darkColorScheme
+import androidx.tv.material3.lightColorScheme
 
 private val GoogleSans = GoogleFont("Google Sans")
 
-private val AppTypography = Typography(
-    fontFamily = FontFamily(
-        listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.Bold).map { weight ->
-            Font(googleFont = GoogleSans, weight = weight)
-        }
-    )
+private val AppFontFamily = FontFamily(
+    listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.Bold).map { weight ->
+        Font(googleFont = GoogleSans, weight = weight)
+    }
 )
+
+private fun TextStyle.inAppFont() = copy(fontFamily = AppFontFamily)
+
+private val AppTypography = Typography().run {
+    copy(
+        displayLarge = displayLarge.inAppFont(),
+        displayMedium = displayMedium.inAppFont(),
+        displaySmall = displaySmall.inAppFont(),
+        headlineLarge = headlineLarge.inAppFont(),
+        headlineMedium = headlineMedium.inAppFont(),
+        headlineSmall = headlineSmall.inAppFont(),
+        titleLarge = titleLarge.inAppFont(),
+        titleMedium = titleMedium.inAppFont(),
+        titleSmall = titleSmall.inAppFont(),
+        bodyLarge = bodyLarge.inAppFont(),
+        bodyMedium = bodyMedium.inAppFont(),
+        bodySmall = bodySmall.inAppFont(),
+        labelLarge = labelLarge.inAppFont(),
+        labelMedium = labelMedium.inAppFont(),
+        labelSmall = labelSmall.inAppFont()
+    )
+}
 
 private const val MEDIUM_CONTRAST = 1 / 3f
 private const val HIGH_CONTRAST = 2 / 3f
@@ -57,28 +77,9 @@ internal val LightDefaultColorScheme = lightColorScheme(
     onError = Color(0xFFFFF7F6),
     errorContainer = Color(0xFFFE8983),
     onErrorContainer = Color(0xFF752121),
-    outline = Color(0xFF7B7A7D),
-    outlineVariant = Color(0xFFB3B1B4),
-    scrim = Color(0xFF000000),
-    surfaceBright = Color(0xFFFCF8F9),
-    surfaceContainer = Color(0xFFF0EDEF),
-    surfaceContainerHigh = Color(0xFFEAE7EA),
-    surfaceContainerHighest = Color(0xFFE4E2E5),
-    surfaceContainerLow = Color(0xFFF6F3F4),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceDim = Color(0xFFDBD9DD),
-    primaryFixed = Color(0xFFDEE2F2),
-    primaryFixedDim = Color(0xFFD0D4E4),
-    onPrimaryFixed = Color(0xFF3A3F4C),
-    onPrimaryFixedVariant = Color(0xFF565B69),
-    secondaryFixed = Color(0xFFE2E2E9),
-    secondaryFixedDim = Color(0xFFD4D4DB),
-    onSecondaryFixed = Color(0xFF3E3F45),
-    onSecondaryFixedVariant = Color(0xFF5A5B61),
-    tertiaryFixed = Color(0xFFD8D3F4),
-    tertiaryFixedDim = Color(0xFFCAC6E6),
-    onTertiaryFixed = Color(0xFF37354F),
-    onTertiaryFixedVariant = Color(0xFF54516D)
+    border = Color(0xFF7B7A7D),
+    borderVariant = Color(0xFFB3B1B4),
+    scrim = Color(0xFF000000)
 )
 
 internal val DarkDefaultColorScheme = darkColorScheme(
@@ -108,28 +109,9 @@ internal val DarkDefaultColorScheme = darkColorScheme(
     onError = Color(0xFF490106),
     errorContainer = Color(0xFF7F2927),
     onErrorContainer = Color(0xFFFF9993),
-    outline = Color(0xFF767578),
-    outlineVariant = Color(0xFF48484A),
-    scrim = Color(0xFF000000),
-    surfaceBright = Color(0xFF2B2C2F),
-    surfaceContainer = Color(0xFF19191B),
-    surfaceContainerHigh = Color(0xFF1F1F21),
-    surfaceContainerHighest = Color(0xFF252628),
-    surfaceContainerLow = Color(0xFF131314),
-    surfaceContainerLowest = Color(0xFF000000),
-    surfaceDim = Color(0xFF0E0E0F),
-    primaryFixed = Color(0xFFDEE2F2),
-    primaryFixedDim = Color(0xFFD0D4E4),
-    onPrimaryFixed = Color(0xFF3A3F4C),
-    onPrimaryFixedVariant = Color(0xFF565B69),
-    secondaryFixed = Color(0xFFE2E2E9),
-    secondaryFixedDim = Color(0xFFD4D4DB),
-    onSecondaryFixed = Color(0xFF3E3F45),
-    onSecondaryFixedVariant = Color(0xFF5A5B61),
-    tertiaryFixed = Color(0xFFD8D3F4),
-    tertiaryFixedDim = Color(0xFFCAC6E6),
-    onTertiaryFixed = Color(0xFF37354F),
-    onTertiaryFixedVariant = Color(0xFF54516D)
+    border = Color(0xFF767578),
+    borderVariant = Color(0xFF48484A),
+    scrim = Color(0xFF000000)
 )
 
 internal val LightMediumContrastColorScheme = lightColorScheme(
@@ -159,28 +141,9 @@ internal val LightMediumContrastColorScheme = lightColorScheme(
     onError = Color(0xFFFFCECA),
     errorContainer = Color(0xFFBB5551),
     onErrorContainer = Color(0xFFFFFFFF),
-    outline = Color(0xFF5F5F61),
-    outlineVariant = Color(0xFF7B7A7D),
-    scrim = Color(0xFF000000),
-    surfaceBright = Color(0xFFFCF8F9),
-    surfaceContainer = Color(0xFFF0EDEF),
-    surfaceContainerHigh = Color(0xFFEAE7EA),
-    surfaceContainerHighest = Color(0xFFE4E2E5),
-    surfaceContainerLow = Color(0xFFF6F3F4),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceDim = Color(0xFFDBD9DD),
-    primaryFixed = Color(0xFF6F7482),
-    primaryFixedDim = Color(0xFF636876),
-    onPrimaryFixed = Color(0xFFFFFFFF),
-    onPrimaryFixedVariant = Color(0xFFFFFFFF),
-    secondaryFixed = Color(0xFF73747A),
-    secondaryFixedDim = Color(0xFF67686E),
-    onSecondaryFixed = Color(0xFFFFFFFF),
-    onSecondaryFixedVariant = Color(0xFFFFFFFF),
-    tertiaryFixed = Color(0xFF75718E),
-    tertiaryFixedDim = Color(0xFF686581),
-    onTertiaryFixed = Color(0xFFFFFFFF),
-    onTertiaryFixedVariant = Color(0xFFFFFFFF)
+    border = Color(0xFF5F5F61),
+    borderVariant = Color(0xFF7B7A7D),
+    scrim = Color(0xFF000000)
 )
 
 internal val DarkMediumContrastColorScheme = darkColorScheme(
@@ -210,28 +173,9 @@ internal val DarkMediumContrastColorScheme = darkColorScheme(
     onError = Color(0xFF5B0D10),
     errorContainer = Color(0xFFBB5551),
     onErrorContainer = Color(0xFFFFFFFF),
-    outline = Color(0xFF949396),
-    outlineVariant = Color(0xFF767578),
-    scrim = Color(0xFF000000),
-    surfaceBright = Color(0xFF2B2C2F),
-    surfaceContainer = Color(0xFF19191B),
-    surfaceContainerHigh = Color(0xFF1F1F21),
-    surfaceContainerHighest = Color(0xFF252628),
-    surfaceContainerLow = Color(0xFF131314),
-    surfaceContainerLowest = Color(0xFF000000),
-    surfaceDim = Color(0xFF0E0E0F),
-    primaryFixed = Color(0xFFDEE2F2),
-    primaryFixedDim = Color(0xFFD0D4E4),
-    onPrimaryFixed = Color(0xFF1A1F2B),
-    onPrimaryFixedVariant = Color(0xFF3A3F4C),
-    secondaryFixed = Color(0xFFE2E2E9),
-    secondaryFixedDim = Color(0xFFD4D4DB),
-    onSecondaryFixed = Color(0xFF1E1F24),
-    onSecondaryFixedVariant = Color(0xFF3E3F45),
-    tertiaryFixed = Color(0xFFD8D3F4),
-    tertiaryFixedDim = Color(0xFFCAC6E6),
-    onTertiaryFixed = Color(0xFF141229),
-    onTertiaryFixedVariant = Color(0xFF37354F)
+    border = Color(0xFF949396),
+    borderVariant = Color(0xFF767578),
+    scrim = Color(0xFF000000)
 )
 
 internal val LightHighContrastColorScheme = lightColorScheme(
@@ -261,28 +205,9 @@ internal val LightHighContrastColorScheme = lightColorScheme(
     onError = Color(0xFFFFCFCB),
     errorContainer = Color(0xFF8E3432),
     onErrorContainer = Color(0xFFFFFFFF),
-    outline = Color(0xFF434345),
-    outlineVariant = Color(0xFF525254),
-    scrim = Color(0xFF000000),
-    surfaceBright = Color(0xFFFCF8F9),
-    surfaceContainer = Color(0xFFF0EDEF),
-    surfaceContainerHigh = Color(0xFFEAE7EA),
-    surfaceContainerHighest = Color(0xFFE4E2E5),
-    surfaceContainerLow = Color(0xFFF6F3F4),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceDim = Color(0xFFDBD9DD),
-    primaryFixed = Color(0xFF4D525F),
-    primaryFixedDim = Color(0xFF414653),
-    onPrimaryFixed = Color(0xFFFFFFFF),
-    onPrimaryFixedVariant = Color(0xFFFFFFFF),
-    secondaryFixed = Color(0xFF505258),
-    secondaryFixedDim = Color(0xFF45464C),
-    onSecondaryFixed = Color(0xFFFFFFFF),
-    onSecondaryFixedVariant = Color(0xFFFFFFFF),
-    tertiaryFixed = Color(0xFF524F6A),
-    tertiaryFixedDim = Color(0xFF46435E),
-    onTertiaryFixed = Color(0xFFFFFFFF),
-    onTertiaryFixedVariant = Color(0xFFFFFFFF)
+    border = Color(0xFF434345),
+    borderVariant = Color(0xFF525254),
+    scrim = Color(0xFF000000)
 )
 
 internal val DarkHighContrastColorScheme = darkColorScheme(
@@ -312,28 +237,9 @@ internal val DarkHighContrastColorScheme = darkColorScheme(
     onError = Color(0xFF5A0D10),
     errorContainer = Color(0xFFF5827C),
     onErrorContainer = Color(0xFF000000),
-    outline = Color(0xFFBAB8BB),
-    outlineVariant = Color(0xFFA4A3A6),
-    scrim = Color(0xFF000000),
-    surfaceBright = Color(0xFF2B2C2F),
-    surfaceContainer = Color(0xFF19191B),
-    surfaceContainerHigh = Color(0xFF1F1F21),
-    surfaceContainerHighest = Color(0xFF252628),
-    surfaceContainerLow = Color(0xFF131314),
-    surfaceContainerLowest = Color(0xFF000000),
-    surfaceDim = Color(0xFF0E0E0F),
-    primaryFixed = Color(0xFFDEE2F2),
-    primaryFixedDim = Color(0xFFD0D4E4),
-    onPrimaryFixed = Color(0xFF000000),
-    onPrimaryFixedVariant = Color(0xFF1A1F2B),
-    secondaryFixed = Color(0xFFE2E2E9),
-    secondaryFixedDim = Color(0xFFD4D4DB),
-    onSecondaryFixed = Color(0xFF000000),
-    onSecondaryFixedVariant = Color(0xFF1E1F24),
-    tertiaryFixed = Color(0xFFD8D3F4),
-    tertiaryFixedDim = Color(0xFFCAC6E6),
-    onTertiaryFixed = Color(0xFF000000),
-    onTertiaryFixedVariant = Color(0xFF141229)
+    border = Color(0xFFBAB8BB),
+    borderVariant = Color(0xFFA4A3A6),
+    scrim = Color(0xFF000000)
 )
 
 @Composable
@@ -347,12 +253,7 @@ fun VideoPlayerTheme(
         contrast >= MEDIUM_CONTRAST -> if (darkTheme) DarkMediumContrastColorScheme else LightMediumContrastColorScheme
         else -> if (darkTheme) DarkDefaultColorScheme else LightDefaultColorScheme
     }
-    MaterialExpressiveTheme(
-        colorScheme = colorScheme,
-        motionScheme = MotionScheme.expressive(),
-        typography = AppTypography,
-        content = content
-    )
+    MaterialTheme(colorScheme = colorScheme, typography = AppTypography, content = content)
 }
 
 @Composable

@@ -12,27 +12,38 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.SegmentedListItem
-import androidx.compose.material3.Text
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
+import androidx.tv.material3.Icon
+import androidx.tv.material3.ListItem
+import androidx.tv.material3.Text
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.data.AudioLanguage
 import com.vasilispngs.videoplayer.data.PlaybackSettings
@@ -41,12 +52,12 @@ import com.vasilispngs.videoplayer.data.SubtitleLanguage
 import com.vasilispngs.videoplayer.data.ThemeMode
 import kotlin.math.roundToInt
 
-private enum class Choice { AudioLanguage, SubtitleLanguage, Theme }
+private enum class Section { AppUpdate, AudioLanguage, SubtitleLanguage, CaptionPreferences, Theme }
 
-private const val PLAYBACK_ROWS = 3
+private const val SIDEBAR_FRACTION = 0.4f
 
 @Composable
-fun SettingsScreen(viewModel: HomeViewModel, themeMode: ThemeMode, onBack: () -> Unit) {
+fun SettingsScreen(viewModel: HomeViewModel, themeMode: ThemeMode) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val selfUpdate by viewModel.selfUpdate.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -57,7 +68,6 @@ fun SettingsScreen(viewModel: HomeViewModel, themeMode: ThemeMode, onBack: () ->
         settings = settings,
         themeMode = themeMode,
         selfUpdate = selfUpdate,
-        onBack = onBack,
         onUpdateApp = {
             if (askForNotifications(context, activity)) {
                 notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -77,128 +87,156 @@ internal fun SettingsContent(
     settings: PlaybackSettings,
     themeMode: ThemeMode,
     selfUpdate: SelfUpdate,
-    onBack: () -> Unit,
     onUpdateApp: () -> Unit,
     onAudioLanguage: (AudioLanguage) -> Unit,
     onSubtitleLanguage: (SubtitleLanguage) -> Unit,
     onCaptionPreferences: () -> Unit,
     onThemeMode: (ThemeMode) -> Unit
 ) {
-    var choice by rememberSaveable { mutableStateOf<Choice?>(null) }
+    val sections = remember(selfUpdate == SelfUpdate.Idle) {
+        Section.entries.filter { it != Section.AppUpdate || selfUpdate != SelfUpdate.Idle }
+    }
+    var chosen by rememberSaveable { mutableStateOf(Section.AudioLanguage) }
+    val section = chosen.takeIf { it in sections } ?: sections.first()
     val focus = rememberInitialFocus()
-    val listState = rememberLazyListState()
+    val sidebar = remember { FocusRequester() }
+    var optionsFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
-    ListScreen(title = stringResource(R.string.settings), focus = focus, onBack = onBack) { contentPadding, nestedScroll ->
-        LazyColumn(
-            state = listState,
+    NavigationBackHandler(
+        state = rememberNavigationEventState(NavigationEventInfo.None),
+        isBackEnabled = optionsFocused,
+        onBackCompleted = { sidebar.requestFocus() }
+    )
+
+    TvScreen(title = stringResource(R.string.settings)) {
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .nestedScroll(nestedScroll)
-                .focusRequester(focus)
-                .focusRestorer(),
-            contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
+                .padding(horizontal = TvListPadding),
+            horizontalArrangement = Arrangement.spacedBy(TvGutter)
         ) {
-            if (selfUpdate != SelfUpdate.Idle) {
-                item(key = "app-update", contentType = ROW) { AppUpdateItem(status = selfUpdate, onUpdate = onUpdateApp) }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth(SIDEBAR_FRACTION)
+                    .fillMaxHeight()
+                    .focusRequester(focus)
+                    .focusRequester(sidebar)
+                    .focusRestorer(),
+                contentPadding = TvContentPadding,
+                verticalArrangement = Arrangement.spacedBy(TvLineSpacing)
+            ) {
+                items(sections, key = { it.name }) { item ->
+                    ListItem(
+                        selected = item == section,
+                        onClick = {
+                            when (item) {
+                                Section.AppUpdate -> if (selfUpdate == SelfUpdate.Available || selfUpdate is SelfUpdate.Failed) onUpdateApp()
+                                Section.CaptionPreferences -> onCaptionPreferences()
+                                else -> focusManager.moveFocus(FocusDirection.Right)
+                            }
+                        },
+                        headlineContent = { Text(text = stringResource(item.titleRes)) },
+                        supportingContent = { Text(text = item.value(settings, themeMode, selfUpdate)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { if (it.isFocused) chosen = item }
+                    )
+                }
             }
-
-            item(key = "playback", contentType = HEADER) { SectionHeader(text = stringResource(R.string.playback)) }
-            item(key = "audio-language", contentType = ROW) {
-                ValueItem(R.string.audio_language, stringResource(settings.audioLanguage.labelRes), 0, PLAYBACK_ROWS) { choice = Choice.AudioLanguage }
-            }
-            item(key = "subtitle-language", contentType = ROW) {
-                ValueItem(R.string.subtitle_language, stringResource(settings.subtitleLanguage.labelRes), 1, PLAYBACK_ROWS) { choice = Choice.SubtitleLanguage }
-            }
-            item(key = "caption-preferences", contentType = ROW) {
-                ValueItem(R.string.caption_preferences, stringResource(R.string.caption_size_and_style), 2, PLAYBACK_ROWS, onCaptionPreferences)
-            }
-
-            item(key = "appearance", contentType = HEADER) { SectionHeader(text = stringResource(R.string.appearance)) }
-            item(key = "theme", contentType = ROW) {
-                ValueItem(R.string.theme, stringResource(themeMode.labelRes), 0, 1) { choice = Choice.Theme }
-            }
-        }
-    }
-
-    val close = { choice = null }
-    when (choice) {
-        Choice.AudioLanguage -> OptionDialog(
-            title = stringResource(R.string.audio_language),
-            options = AudioLanguage.entries,
-            current = settings.audioLanguage,
-            label = { stringResource(it.labelRes) },
-            onDismiss = close,
-            onSelect = {
-                close()
-                onAudioLanguage(it)
-            }
-        )
-        Choice.SubtitleLanguage -> OptionDialog(
-            title = stringResource(R.string.subtitle_language),
-            options = SubtitleLanguage.entries,
-            current = settings.subtitleLanguage,
-            label = { stringResource(it.labelRes) },
-            onDismiss = close,
-            onSelect = {
-                close()
-                onSubtitleLanguage(it)
-            }
-        )
-        Choice.Theme -> OptionDialog(
-            title = stringResource(R.string.theme),
-            options = ThemeMode.entries,
-            current = themeMode,
-            label = { stringResource(it.labelRes) },
-            onDismiss = close,
-            onSelect = {
-                close()
-                onThemeMode(it)
-            }
-        )
-        null -> Unit
-    }
-}
-
-@Composable
-private fun ValueItem(@StringRes title: Int, value: String, index: Int, count: Int, onClick: () -> Unit) {
-    SegmentedListItem(
-        onClick = onClick,
-        shapes = ListItemDefaults.segmentedShapes(index, count),
-        colors = listItemColors(),
-        supportingContent = { Text(text = value) }
-    ) {
-        Text(text = stringResource(title))
-    }
-}
-
-@Composable
-private fun AppUpdateItem(status: SelfUpdate, onUpdate: () -> Unit) {
-    val shapes = ListItemDefaults.segmentedShapes(0, 1)
-    val headline = @Composable { Text(text = stringResource(R.string.self_update_available)) }
-    val supporting = @Composable {
-        when (status) {
-            is SelfUpdate.Downloading -> Column {
-                Text(
-                    text = stringResource(R.string.self_update_downloading, (status.progress * 100).roundToInt()),
-                    style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_FIGURES)
+            val options = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .onFocusChanged { optionsFocused = it.hasFocus }
+            when (section) {
+                Section.AudioLanguage -> OptionList(
+                    options = AudioLanguage.entries,
+                    current = settings.audioLanguage,
+                    label = { stringResource(it.labelRes) },
+                    onSelect = onAudioLanguage,
+                    modifier = options
                 )
-                LinearWavyProgressIndicator(progress = { status.progress }, modifier = Modifier.fillMaxWidth())
+                Section.SubtitleLanguage -> OptionList(
+                    options = SubtitleLanguage.entries,
+                    current = settings.subtitleLanguage,
+                    label = { stringResource(it.labelRes) },
+                    onSelect = onSubtitleLanguage,
+                    modifier = options
+                )
+                Section.Theme -> OptionList(
+                    options = ThemeMode.entries,
+                    current = themeMode,
+                    label = { stringResource(it.labelRes) },
+                    onSelect = onThemeMode,
+                    modifier = options
+                )
+                Section.AppUpdate, Section.CaptionPreferences -> Unit
             }
-            SelfUpdate.Installing -> Column {
-                Text(text = stringResource(R.string.self_update_installing))
-                LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-            is SelfUpdate.Failed -> Text(text = stringResource(R.string.self_update_failed).withCode(status.code))
-            else -> Text(text = stringResource(R.string.self_update_install))
         }
     }
-    if (status == SelfUpdate.Available || status is SelfUpdate.Failed) {
-        SegmentedListItem(onClick = onUpdate, shapes = shapes, colors = listItemColors(), supportingContent = supporting, content = headline)
-    } else {
-        SegmentedListItem(shapes = shapes, colors = listItemColors(), supportingContent = supporting, content = headline)
+}
+
+@Composable
+internal fun <T> OptionList(
+    options: List<T>,
+    current: T,
+    label: @Composable (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    currentFocus: FocusRequester = remember { FocusRequester() },
+    footer: @Composable (() -> Unit)? = null
+) {
+    val focused = options.indexOf(current).coerceAtLeast(0)
+    Column(
+        modifier = modifier
+            .focusRestorer(currentFocus)
+            .verticalScroll(rememberScrollState())
+            .padding(TvContentPadding),
+        verticalArrangement = Arrangement.spacedBy(TvLineSpacing)
+    ) {
+        options.forEachIndexed { index, option ->
+            val chosen = option == current
+            ListItem(
+                selected = chosen,
+                onClick = { onSelect(option) },
+                headlineContent = { Text(text = label(option)) },
+                trailingContent = if (chosen) {
+                    { Icon(painter = painterResource(R.drawable.ic_check), contentDescription = null) }
+                } else {
+                    null
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (index == focused) Modifier.focusRequester(currentFocus) else Modifier)
+            )
+        }
+        footer?.invoke()
     }
 }
+
+@Composable
+private fun Section.value(settings: PlaybackSettings, themeMode: ThemeMode, selfUpdate: SelfUpdate): String = when (this) {
+    Section.AppUpdate -> when (selfUpdate) {
+        is SelfUpdate.Downloading -> stringResource(R.string.self_update_downloading, (selfUpdate.progress * 100).roundToInt())
+        SelfUpdate.Installing -> stringResource(R.string.self_update_installing)
+        is SelfUpdate.Failed -> stringResource(R.string.self_update_failed).withCode(selfUpdate.code)
+        else -> stringResource(R.string.self_update_install)
+    }
+    Section.AudioLanguage -> stringResource(settings.audioLanguage.labelRes)
+    Section.SubtitleLanguage -> stringResource(settings.subtitleLanguage.labelRes)
+    Section.CaptionPreferences -> stringResource(R.string.caption_size_and_style)
+    Section.Theme -> stringResource(themeMode.labelRes)
+}
+
+@get:StringRes
+private val Section.titleRes: Int
+    get() = when (this) {
+        Section.AppUpdate -> R.string.self_update_available
+        Section.AudioLanguage -> R.string.audio_language
+        Section.SubtitleLanguage -> R.string.subtitle_language
+        Section.CaptionPreferences -> R.string.caption_preferences
+        Section.Theme -> R.string.theme
+    }
 
 private fun askForNotifications(context: Context, activity: Activity?): Boolean =
     context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&

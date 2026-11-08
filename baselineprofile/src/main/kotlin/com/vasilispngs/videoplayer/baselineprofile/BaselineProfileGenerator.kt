@@ -24,9 +24,8 @@ class BaselineProfileGenerator {
         startActivityAndWait()
         uiAutomator {
             onElement { contentDescription?.toString() == "Ρυθμίσεις" }.click()
-            onElement { textAsString() == "Θέμα" }.click()
-            onElement { textAsString() == "Ακύρωση" }.click()
-            onElement { contentDescription?.toString() == "Πίσω" }.click()
+            onElement { textAsString() == "Θέμα" }
+            pressBack()
         }
     }
 }
