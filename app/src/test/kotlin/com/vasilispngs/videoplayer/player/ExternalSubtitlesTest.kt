@@ -45,6 +45,22 @@ class ExternalSubtitlesTest {
         assertEquals(MimeTypes.APPLICATION_SUBRIP, subtitles.getValue("Movie.srt").mimeType)
     }
 
+    @Test
+    fun `leaves out the subtitles of another video whose name goes on from this one`() = runTest {
+        write("Blade.Runner.mkv", "")
+        write("Blade.Runner.Final.Cut.mkv", "")
+        write("Blade.Runner.el.srt", GREEK_TEXT)
+        write("Blade.Runner.Final.Cut.el.srt", GREEK_TEXT)
+        write("Blade.Runner.Final.Cut.srt", ENGLISH_TEXT)
+        val siblings = library.list(Uri.fromFile(folder.root))
+
+        val first = library.externalSubtitles("Blade.Runner.mkv", siblings).map { it.id }.toSet()
+        val second = library.externalSubtitles("Blade.Runner.Final.Cut.mkv", siblings).map { it.id }.toSet()
+
+        assertEquals(setOf("Blade.Runner.el.srt"), first)
+        assertEquals(setOf("Blade.Runner.Final.Cut.el.srt", "Blade.Runner.Final.Cut.srt"), second)
+    }
+
     private fun write(name: String, text: String, charset: Charset = Charsets.UTF_8) {
         folder.newFile(name).writeBytes(text.toByteArray(charset))
     }

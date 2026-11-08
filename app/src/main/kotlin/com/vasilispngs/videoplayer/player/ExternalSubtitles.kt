@@ -6,6 +6,7 @@ import androidx.media3.common.MimeTypes
 import com.vasilispngs.videoplayer.data.ENGLISH
 import com.vasilispngs.videoplayer.data.Entry
 import com.vasilispngs.videoplayer.data.GREEK
+import com.vasilispngs.videoplayer.data.Kind
 import com.vasilispngs.videoplayer.data.Library
 
 private val SUBTITLE_TYPES = mapOf(
@@ -21,13 +22,12 @@ private const val SAMPLE_BYTES = 64 * 1024
 
 suspend fun Library.externalSubtitles(video: String, siblings: List<Entry>): List<SubtitleConfiguration> {
     val base = video.substringBeforeLast('.')
+    val longer = siblings.filter { it.kind == Kind.Video }.map { it.name.substringBeforeLast('.') }.filter { it.length > base.length }
     return siblings.mapNotNull { entry ->
         val mimeType = SUBTITLE_TYPES[entry.name.substringAfterLast('.', "").lowercase()] ?: return@mapNotNull null
         val stem = entry.name.substringBeforeLast('.')
-        if (!stem.startsWith(base, ignoreCase = true)) return@mapNotNull null
-        val rest = stem.substring(base.length)
-        if (rest.isNotEmpty() && rest.first() != '.') return@mapNotNull null
-        val tags = rest.lowercase().split('.').filter(String::isNotEmpty)
+        if (!stem.belongsTo(base) || longer.any(stem::belongsTo)) return@mapNotNull null
+        val tags = stem.substring(base.length).lowercase().split('.').filter(String::isNotEmpty)
         val language = when {
             tags.any { it in GREEK_TAGS } -> GREEK
             tags.any { it in ENGLISH_TAGS } -> ENGLISH
@@ -43,6 +43,8 @@ suspend fun Library.externalSubtitles(video: String, siblings: List<Entry>): Lis
             .build()
     }
 }
+
+private fun String.belongsTo(base: String) = startsWith(base, ignoreCase = true) && (length == base.length || this[base.length] == '.')
 
 internal fun isGreek(bytes: ByteArray): Boolean {
     val charset = SubtitleCharsetDetector.detect(bytes, 0, bytes.size) ?: Charsets.UTF_8
