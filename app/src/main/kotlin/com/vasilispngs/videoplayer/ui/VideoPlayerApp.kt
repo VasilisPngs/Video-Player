@@ -32,8 +32,10 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.onConsumedWindowInsetsChanged
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -339,7 +341,7 @@ internal fun <T> OptionDialog(
         dismissButton = extraButton,
         title = { Text(text = title) },
         text = {
-            Column(modifier = Modifier.selectableGroup()) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()).selectableGroup()) {
                 options.forEach { option ->
                     val selected = option == current
                     Row(
