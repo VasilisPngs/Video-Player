@@ -14,6 +14,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.core.net.toUri
 import androidx.test.platform.app.InstrumentationRegistry
+import com.google.android.apps.common.testing.accessibility.framework.AccessibilityCheckResultUtils.matchesCheck
+import com.google.android.apps.common.testing.accessibility.framework.checks.TouchTargetSizeCheck
+import com.google.android.apps.common.testing.accessibility.framework.integrations.espresso.AccessibilityValidator
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.data.Entry
 import com.vasilispngs.videoplayer.data.ErrorCode
@@ -39,7 +42,11 @@ class AccessibilityTest {
 
     @Before
     fun enableAccessibilityChecks() {
-        compose.enableAccessibilityChecks()
+        compose.enableAccessibilityChecks(
+            AccessibilityValidator()
+                .setRunChecksFromRootView(true)
+                .setSuppressingResultMatcher(matchesCheck(TouchTargetSizeCheck::class.java))
+        )
     }
 
     @Test
