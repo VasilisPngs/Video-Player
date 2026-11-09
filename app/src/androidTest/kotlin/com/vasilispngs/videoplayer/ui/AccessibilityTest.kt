@@ -10,7 +10,7 @@ import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.core.net.toUri
 import androidx.test.platform.app.InstrumentationRegistry
@@ -80,7 +80,7 @@ class AccessibilityTest {
             )
         }
         checkLightAndDark()
-        compose.onNodeWithText(string(R.string.subtitle_language)).performClick()
+        compose.onNodeWithText(string(R.string.subtitle_language)).requestFocus()
         checkLightAndDark()
     }
 
