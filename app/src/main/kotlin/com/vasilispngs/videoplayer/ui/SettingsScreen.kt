@@ -43,6 +43,7 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.tv.material3.Icon
 import androidx.tv.material3.ListItem
+import androidx.tv.material3.LocalTextStyle
 import androidx.tv.material3.Text
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.data.AudioLanguage
@@ -137,7 +138,12 @@ internal fun SettingsContent(
                             }
                         },
                         headlineContent = { Text(text = stringResource(item.titleRes)) },
-                        supportingContent = { Text(text = item.value(settings, themeMode, selfUpdate)) },
+                        supportingContent = {
+                            Text(
+                                text = item.value(settings, themeMode, selfUpdate),
+                                style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_FIGURES)
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .onFocusChanged { if (it.isFocused) chosen = item }
