@@ -2,6 +2,8 @@
     <string name="app_name" translatable="false">Video Player</string>
     <string name="home">Αρχική</string>
     <string name="settings">Ρυθμίσεις</string>
+    <string name="back">Πίσω</string>
+    <string name="cancel">Ακύρωση</string>
     <string name="continue_watching">Συνέχεια παρακολούθησης</string>
     <plurals name="minutes_left">
         <item quantity="one">Απομένει %1$d λεπτό</item>
@@ -12,9 +14,9 @@
     <string name="all_files_access">Πρόσβαση σε όλα τα αρχεία</string>
     <string name="all_files_access_description">Χρειάζεται για τα αρχεία του USB. Από τον υπολογιστή: %1$s</string>
     <string name="all_files_access_command" translatable="false">adb shell appops set --uid %1$s MANAGE_EXTERNAL_STORAGE allow</string>
-    <string name="loading">Φόρτωση…</string>
     <string name="folder_empty">Ο φάκελος είναι κενός</string>
     <string name="folder_failed">Δεν ήταν δυνατό το άνοιγμα του φακέλου</string>
+    <string name="playback">Αναπαραγωγή</string>
     <string name="audio_language">Γλώσσα ήχου</string>
     <string name="audio_language_first">Πρώτο κανάλι (αρχική γλώσσα)</string>
     <string name="subtitle_language">Γλώσσα υπότιτλων</string>
@@ -23,6 +25,7 @@
     <string name="language_greek">Ελληνικά</string>
     <string name="language_english">Αγγλικά</string>
     <string name="subtitles_off">Κανένα</string>
+    <string name="appearance">Εμφάνιση</string>
     <string name="theme">Θέμα</string>
     <string name="theme_system">Προεπιλογή συστήματος</string>
     <string name="theme_light">Ανοιχτόχρωμο</string>

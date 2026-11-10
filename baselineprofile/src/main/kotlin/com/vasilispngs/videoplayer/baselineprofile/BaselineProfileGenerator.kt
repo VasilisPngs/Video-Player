@@ -23,12 +23,10 @@ class BaselineProfileGenerator {
         pressHome()
         startActivityAndWait()
         uiAutomator {
-            device.pressDPadDown()
-            device.pressDPadUp()
-            device.pressDPadUp()
-            device.pressDPadCenter()
-            onElement { textAsString() == "Θέμα" }
-            pressBack()
+            onElement { contentDescription?.toString() == "Ρυθμίσεις" }.click()
+            onElement { textAsString() == "Θέμα" }.click()
+            onElement { textAsString() == "Ακύρωση" }.click()
+            onElement { contentDescription?.toString() == "Πίσω" }.click()
         }
     }
 }

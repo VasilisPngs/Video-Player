@@ -10,13 +10,10 @@ import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.core.net.toUri
 import androidx.test.platform.app.InstrumentationRegistry
-import com.google.android.apps.common.testing.accessibility.framework.AccessibilityCheckResultUtils.matchesCheck
-import com.google.android.apps.common.testing.accessibility.framework.checks.TouchTargetSizeCheck
-import com.google.android.apps.common.testing.accessibility.framework.integrations.espresso.AccessibilityValidator
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.data.Entry
 import com.vasilispngs.videoplayer.data.ErrorCode
@@ -42,11 +39,7 @@ class AccessibilityTest {
 
     @Before
     fun enableAccessibilityChecks() {
-        compose.enableAccessibilityChecks(
-            AccessibilityValidator()
-                .setRunChecksFromRootView(true)
-                .setSuppressingResultMatcher(matchesCheck(TouchTargetSizeCheck::class.java))
-        )
+        compose.enableAccessibilityChecks()
     }
 
     @Test
@@ -72,6 +65,7 @@ class AccessibilityTest {
                 settings = PlaybackSettings(),
                 themeMode = ThemeMode.System,
                 selfUpdate = SelfUpdate.Downloading(DOWNLOADED),
+                onBack = {},
                 onUpdateApp = {},
                 onAudioLanguage = {},
                 onSubtitleLanguage = {},
@@ -80,7 +74,7 @@ class AccessibilityTest {
             )
         }
         checkLightAndDark()
-        compose.onNodeWithText(string(R.string.subtitle_language)).requestFocus()
+        compose.onNodeWithText(string(R.string.subtitle_language)).performClick()
         checkLightAndDark()
     }
 
@@ -123,7 +117,7 @@ class AccessibilityTest {
     }
 
     private fun showFolder(listing: Listing) = show {
-        FolderContent(title = "SanDisk", listing = listing, thumbnails = thumbnails, onOpen = {})
+        FolderContent(title = "SanDisk", listing = listing, thumbnails = thumbnails, onOpen = {}, onBack = {})
     }
 
     private fun show(content: @Composable () -> Unit) {
