@@ -11,19 +11,21 @@ import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -45,7 +47,15 @@ import kotlin.math.ceil
 private const val MILLIS_PER_MINUTE = 60_000.0
 
 @Composable
-fun HomeScreen(viewModel: HomeViewModel, thumbnails: Thumbnails, onOpen: (Screen) -> Unit, onSettings: () -> Unit) {
+fun HomeScreen(
+    viewModel: HomeViewModel,
+    thumbnails: Thumbnails,
+    listState: LazyListState,
+    barState: TopAppBarState,
+    focus: FocusRequester,
+    focusOnOpen: Boolean,
+    onOpen: (Screen) -> Unit
+) {
     val volumes by viewModel.volumes.collectAsStateWithLifecycle()
     val inProgress by viewModel.inProgress.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -60,8 +70,11 @@ fun HomeScreen(viewModel: HomeViewModel, thumbnails: Thumbnails, onOpen: (Screen
         allFiles = allFiles,
         onAllFiles = allFilesSettings?.let { intent -> { context.open(intent) } },
         thumbnails = thumbnails,
-        onOpen = onOpen,
-        onSettings = onSettings
+        listState = listState,
+        barState = barState,
+        focus = focus,
+        focusOnOpen = focusOnOpen,
+        onOpen = onOpen
     )
 }
 
@@ -72,8 +85,11 @@ internal fun HomeContent(
     allFiles: Boolean,
     onAllFiles: (() -> Unit)?,
     thumbnails: Thumbnails,
-    onOpen: (Screen) -> Unit,
-    onSettings: () -> Unit
+    listState: LazyListState,
+    barState: TopAppBarState,
+    focus: FocusRequester,
+    focusOnOpen: Boolean,
+    onOpen: (Screen) -> Unit
 ) {
     val loaded = volumes != null && inProgress != null
     val progress = inProgress.orEmpty()
@@ -81,18 +97,12 @@ internal fun HomeContent(
     val warning = if (allFiles) 0 else 1
     val sources = warning + usb.size
     val empty = loaded && progress.isEmpty() && sources == 0
-    val focus = rememberInitialFocus(loaded && !empty)
-    val listState = rememberLazyListState()
+    rememberInitialFocus(loaded && !empty && focusOnOpen, focus)
     val thumbnailSize = rememberThumbnailSize()
 
     ReportDrawnWhen { loaded }
 
-    ListScreen(
-        title = stringResource(R.string.home),
-        focus = focus,
-        onBack = null,
-        action = { modifier -> BarAction(icon = R.drawable.ic_settings, label = stringResource(R.string.settings), onClick = onSettings, modifier = modifier) }
-    ) { contentPadding, nestedScroll ->
+    ListScreen(title = stringResource(R.string.home), focus = focus, onBack = null, barState = barState) { contentPadding, nestedScroll ->
         if (empty) {
             Message(text = stringResource(R.string.usb_empty), contentPadding = contentPadding)
         } else {

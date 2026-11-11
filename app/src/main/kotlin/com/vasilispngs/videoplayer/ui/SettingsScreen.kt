@@ -15,18 +15,20 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -46,7 +48,13 @@ private enum class Choice { AudioLanguage, SubtitleLanguage, Theme }
 private const val PLAYBACK_ROWS = 3
 
 @Composable
-fun SettingsScreen(viewModel: HomeViewModel, themeMode: ThemeMode, onBack: () -> Unit) {
+fun SettingsScreen(
+    viewModel: HomeViewModel,
+    themeMode: ThemeMode,
+    listState: LazyListState,
+    barState: TopAppBarState,
+    focus: FocusRequester
+) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val selfUpdate by viewModel.selfUpdate.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -57,7 +65,9 @@ fun SettingsScreen(viewModel: HomeViewModel, themeMode: ThemeMode, onBack: () ->
         settings = settings,
         themeMode = themeMode,
         selfUpdate = selfUpdate,
-        onBack = onBack,
+        listState = listState,
+        barState = barState,
+        focus = focus,
         onUpdateApp = {
             if (askForNotifications(context, activity)) {
                 notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -77,7 +87,9 @@ internal fun SettingsContent(
     settings: PlaybackSettings,
     themeMode: ThemeMode,
     selfUpdate: SelfUpdate,
-    onBack: () -> Unit,
+    listState: LazyListState,
+    barState: TopAppBarState,
+    focus: FocusRequester,
     onUpdateApp: () -> Unit,
     onAudioLanguage: (AudioLanguage) -> Unit,
     onSubtitleLanguage: (SubtitleLanguage) -> Unit,
@@ -85,10 +97,8 @@ internal fun SettingsContent(
     onThemeMode: (ThemeMode) -> Unit
 ) {
     var choice by rememberSaveable { mutableStateOf<Choice?>(null) }
-    val focus = rememberInitialFocus()
-    val listState = rememberLazyListState()
 
-    ListScreen(title = stringResource(R.string.settings), focus = focus, onBack = onBack) { contentPadding, nestedScroll ->
+    ListScreen(title = stringResource(R.string.settings), focus = focus, onBack = null, barState = barState) { contentPadding, nestedScroll ->
         LazyColumn(
             state = listState,
             modifier = Modifier

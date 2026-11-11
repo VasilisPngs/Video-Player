@@ -2,10 +2,14 @@ package com.vasilispngs.videoplayer.ui
 
 import androidx.activity.ComponentActivity
 import androidx.annotation.StringRes
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -65,7 +69,9 @@ class AccessibilityTest {
                 settings = PlaybackSettings(),
                 themeMode = ThemeMode.System,
                 selfUpdate = SelfUpdate.Downloading(DOWNLOADED),
-                onBack = {},
+                listState = rememberLazyListState(),
+                barState = rememberTopAppBarState(),
+                focus = remember { FocusRequester() },
                 onUpdateApp = {},
                 onAudioLanguage = {},
                 onSubtitleLanguage = {},
@@ -111,8 +117,11 @@ class AccessibilityTest {
             allFiles = allFiles,
             onAllFiles = {},
             thumbnails = thumbnails,
-            onOpen = {},
-            onSettings = {}
+            listState = rememberLazyListState(),
+            barState = rememberTopAppBarState(),
+            focus = remember { FocusRequester() },
+            focusOnOpen = true,
+            onOpen = {}
         )
     }
 

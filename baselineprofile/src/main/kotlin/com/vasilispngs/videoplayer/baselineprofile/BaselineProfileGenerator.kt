@@ -23,10 +23,10 @@ class BaselineProfileGenerator {
         pressHome()
         startActivityAndWait()
         uiAutomator {
-            onElement { contentDescription?.toString() == "Ρυθμίσεις" }.click()
+            onElement { textAsString() == "Ρυθμίσεις" }.click()
             onElement { textAsString() == "Θέμα" }.click()
             onElement { textAsString() == "Ακύρωση" }.click()
-            onElement { contentDescription?.toString() == "Πίσω" }.click()
+            pressBack()
         }
     }
 }

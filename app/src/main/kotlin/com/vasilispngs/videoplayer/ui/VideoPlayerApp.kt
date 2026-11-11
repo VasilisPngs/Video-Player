@@ -2,10 +2,13 @@ package com.vasilispngs.videoplayer.ui
 
 import android.content.pm.PackageManager
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -32,6 +35,9 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.onConsumedWindowInsetsChanged
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -57,14 +63,21 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarState
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.material3.rememberTooltipState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -101,11 +114,14 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.window.core.layout.WindowSizeClass
+import com.vasilispngs.videoplayer.AppContainer
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.appContainer
 import com.vasilispngs.videoplayer.data.ErrorCode
 import com.vasilispngs.videoplayer.data.ThemeMode
 import com.vasilispngs.videoplayer.player.resetDisplayMode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializer
 import kotlin.math.sign
@@ -120,6 +136,10 @@ private val OptionHeight = 56.dp
 internal val TvOverscanHorizontal = 48.dp
 internal val TvOverscanVertical = 27.dp
 private val ForwardSlide = 96.dp
+private const val FADE_OUT_MILLIS = 90
+private const val FADE_IN_MILLIS = 210
+private const val FADE_THROUGH_ENTER_SCALE = 0.8f
+private const val FADE_THROUGH_EXIT_SCALE = 1.05f
 private const val PREDICTIVE_BACK_EXIT_SCALE = 0.9f
 private const val PREDICTIVE_BACK_ENTER_SCALE = 1.1f
 private const val PREDICTIVE_BACK_FADE_THRESHOLD = 0.35f
@@ -147,6 +167,17 @@ sealed interface Screen : NavKey {
     data class Player(val uri: String) : Screen
 }
 
+private class TopLevelItem(
+    @StringRes val labelRes: Int,
+    @DrawableRes val iconRes: Int,
+    @DrawableRes val selectedIconRes: Int
+)
+
+private val TopLevelItems = mapOf(
+    Screen.Home to TopLevelItem(R.string.home, R.drawable.ic_home, R.drawable.ic_home_filled),
+    Screen.Settings to TopLevelItem(R.string.settings, R.drawable.ic_settings, R.drawable.ic_settings_filled)
+)
+
 @Composable
 fun VideoPlayerApp(viewModel: HomeViewModel, themeMode: ThemeMode, modifier: Modifier = Modifier) {
     val backStack = rememberSerializable(serializer = serializer()) { NavBackStack<Screen>(Screen.Home) }
@@ -162,16 +193,18 @@ fun VideoPlayerApp(viewModel: HomeViewModel, themeMode: ThemeMode, modifier: Mod
             val _ = runCatching { context.startActivity(confirmation) }
         }
     }
-    val navigationBarScrim = WindowInsets.navigationBars.getBottom(LocalDensity.current) > 0
+    val navigationSuiteType = NavigationSuiteScaffoldDefaults.navigationSuiteType(currentWindowAdaptiveInfoV2())
+    val navigationBar = navigationSuiteType == NavigationSuiteType.ShortNavigationBarCompact ||
+        navigationSuiteType == NavigationSuiteType.ShortNavigationBarMedium
+    val navigationBarScrim = (playing || !navigationBar) && WindowInsets.navigationBars.getBottom(LocalDensity.current) > 0
     SideEffect(window, navigationBarScrim) { window?.isNavigationBarContrastEnforced = navigationBarScrim }
 
-    val open: (Screen) -> Unit = { screen -> if (backStack.last() != screen) backStack.add(screen) }
     val goBack: () -> Unit = { backStack.removeLastOrNull() }
     val motion = MaterialTheme.motionScheme
     val slide = with(LocalDensity.current) { ForwardSlide.roundToPx() }
 
     NavDisplay(
-        backStack = backStack,
+        backStack = if (playing) listOf(Screen.Home, backStack.last()) else listOf(Screen.Home),
         modifier = modifier,
         onBack = goBack,
         entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
@@ -180,14 +213,14 @@ fun VideoPlayerApp(viewModel: HomeViewModel, themeMode: ThemeMode, modifier: Mod
         predictivePopTransitionSpec = { predictiveBackTransition() },
         entryProvider = entryProvider {
             entry<Screen.Home> {
-                HomeScreen(viewModel = viewModel, thumbnails = container.thumbnails, onOpen = open, onSettings = { open(Screen.Settings) })
-            }
-            entry<Screen.Settings> {
-                SettingsScreen(viewModel = viewModel, themeMode = themeMode, onBack = goBack)
-            }
-            entry<Screen.Folder> { key ->
-                val folder = viewModel { FolderViewModel(key.uri.toUri(), container.library) }
-                FolderScreen(title = key.title, viewModel = folder, thumbnails = container.thumbnails, onOpen = open, onBack = goBack)
+                Library(
+                    backStack = backStack,
+                    navigationSuiteType = navigationSuiteType,
+                    navigationBar = navigationBar,
+                    viewModel = viewModel,
+                    themeMode = themeMode,
+                    container = container
+                )
             }
             entry<Screen.Player> { key ->
                 val player = viewModel {
@@ -204,11 +237,133 @@ fun VideoPlayerApp(viewModel: HomeViewModel, themeMode: ThemeMode, modifier: Mod
 }
 
 @Composable
+private fun Library(
+    backStack: NavBackStack<Screen>,
+    navigationSuiteType: NavigationSuiteType,
+    navigationBar: Boolean,
+    viewModel: HomeViewModel,
+    themeMode: ThemeMode,
+    container: AppContainer
+) {
+    val entries = backStack.filterNot { it is Screen.Player }
+    val current = entries.last()
+    val topLevel = if (current == Screen.Settings) Screen.Settings else Screen.Home
+    val homeListState = rememberLazyListState()
+    val settingsListState = rememberLazyListState()
+    val homeBarState = rememberTopAppBarState()
+    val settingsBarState = rememberTopAppBarState()
+    val homeFocus = remember { FocusRequester() }
+    val settingsFocus = remember { FocusRequester() }
+    val coroutineScope = rememberCoroutineScope()
+    var tabSwitch by remember { mutableStateOf(false) }
+    val activeFocus = when (current) {
+        Screen.Home -> homeFocus
+        Screen.Settings -> settingsFocus
+        else -> FocusRequester.Default
+    }
+    val open: (Screen) -> Unit = { screen ->
+        if (backStack.last() != screen) {
+            tabSwitch = false
+            backStack.add(screen)
+        }
+    }
+    val goBack: () -> Unit = {
+        tabSwitch = false
+        backStack.removeLastOrNull()
+    }
+    val navigate: (Screen) -> Unit = { screen ->
+        when {
+            screen != current -> {
+                tabSwitch = true
+                backStack.subList(1, backStack.size).clear()
+                if (screen != Screen.Home) backStack.add(screen)
+            }
+            screen == Screen.Home -> coroutineScope.reveal(homeListState, homeBarState)
+            else -> coroutineScope.reveal(settingsListState, settingsBarState)
+        }
+    }
+    val motion = MaterialTheme.motionScheme
+    val slide = with(LocalDensity.current) { ForwardSlide.roundToPx() }
+
+    NavigationSuiteScaffold(
+        navigationItems = {
+            TopLevelItems.forEach { (screen, item) ->
+                val selected = screen == topLevel
+                NavigationSuiteItem(
+                    selected = selected,
+                    onClick = { navigate(screen) },
+                    icon = {
+                        Icon(
+                            painter = painterResource(if (selected) item.selectedIconRes else item.iconRes),
+                            contentDescription = null
+                        )
+                    },
+                    label = { Text(text = stringResource(item.labelRes)) },
+                    navigationSuiteType = navigationSuiteType,
+                    modifier = Modifier.focusProperties {
+                        val first = screen == TopLevelItems.keys.first()
+                        val last = screen == TopLevelItems.keys.last()
+                        if (navigationBar) {
+                            up = activeFocus
+                            if (first) start = FocusRequester.Cancel
+                            if (last) end = FocusRequester.Cancel
+                        } else {
+                            end = activeFocus
+                            if (first) up = FocusRequester.Cancel
+                            if (last) down = FocusRequester.Cancel
+                        }
+                    }
+                )
+            }
+        },
+        modifier = Modifier.windowInsetsPadding(tvOverscan().only(WindowInsetsSides.Start)),
+        navigationSuiteType = navigationSuiteType,
+        navigationItemVerticalArrangement = Arrangement.Center
+    ) {
+        NavDisplay(
+            backStack = entries,
+            onBack = goBack,
+            entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
+            transitionSpec = { if (tabSwitch) fadeThrough() else forwardTransition(motion, slide) },
+            popTransitionSpec = { if (tabSwitch) fadeThrough() else backTransition(motion) },
+            predictivePopTransitionSpec = { predictiveBackTransition() },
+            entryProvider = entryProvider {
+                entry<Screen.Home> {
+                    val focusOnOpen = remember { !tabSwitch }
+                    HomeScreen(
+                        viewModel = viewModel,
+                        thumbnails = container.thumbnails,
+                        listState = homeListState,
+                        barState = homeBarState,
+                        focus = homeFocus,
+                        focusOnOpen = focusOnOpen,
+                        onOpen = open
+                    )
+                }
+                entry<Screen.Settings> {
+                    SettingsScreen(
+                        viewModel = viewModel,
+                        themeMode = themeMode,
+                        listState = settingsListState,
+                        barState = settingsBarState,
+                        focus = settingsFocus
+                    )
+                }
+                entry<Screen.Folder> { key ->
+                    val folder = viewModel { FolderViewModel(key.uri.toUri(), container.library) }
+                    FolderScreen(title = key.title, viewModel = folder, thumbnails = container.thumbnails, onOpen = open, onBack = goBack)
+                }
+            }
+        )
+    }
+}
+
+@Composable
 internal fun ListScreen(
     title: String,
     focus: FocusRequester,
     onBack: (() -> Unit)?,
-    action: (@Composable (Modifier) -> Unit)? = null,
+    barState: TopAppBarState = rememberTopAppBarState(),
     content: @Composable (contentPadding: PaddingValues, nestedScroll: NestedScrollConnection) -> Unit
 ) {
     val windowInfo = currentWindowAdaptiveInfoV2()
@@ -217,15 +372,9 @@ internal fun ListScreen(
     } else {
         CompactMargin
     }
-    val context = LocalContext.current
-    val television = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
-    val overscan = if (television) {
-        WindowInsets(TvOverscanHorizontal, TvOverscanVertical, TvOverscanHorizontal, TvOverscanVertical)
-    } else {
-        WindowInsets(0)
-    }
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val contentInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+    val overscan = tvOverscan()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(barState)
+    val contentInsets = ScaffoldDefaults.contentWindowInsets.add(overscan.only(WindowInsetsSides.Bottom + WindowInsetsSides.End))
     var consumedInsets by remember { mutableStateOf(WindowInsets(0)) }
     BoxWithConstraints(modifier = Modifier.onConsumedWindowInsetsChanged { consumedInsets = it }) {
         val layoutDirection = LocalLayoutDirection.current
@@ -246,7 +395,6 @@ internal fun ListScreen(
                             )
                         }
                     },
-                    actions = { action?.invoke(Modifier.focusProperties { down = focus }) },
                     windowInsets = TopAppBarDefaults.windowInsets.add(overscan.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
                     contentPadding = PaddingValues(horizontal = sideMargin - CompactMargin),
                     scrollBehavior = scrollBehavior
@@ -268,8 +416,18 @@ internal fun ListScreen(
 }
 
 @Composable
-internal fun rememberInitialFocus(ready: Boolean = true): FocusRequester {
-    val focus = remember { FocusRequester() }
+private fun tvOverscan(): WindowInsets {
+    val context = LocalContext.current
+    val television = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
+    return if (television) {
+        WindowInsets(TvOverscanHorizontal, TvOverscanVertical, TvOverscanHorizontal, TvOverscanVertical)
+    } else {
+        WindowInsets(0)
+    }
+}
+
+@Composable
+internal fun rememberInitialFocus(ready: Boolean = true, focus: FocusRequester = remember { FocusRequester() }): FocusRequester {
     val inputModeManager = LocalInputModeManager.current
     LaunchedEffect(ready) {
         if (ready && inputModeManager.inputMode == InputMode.Keyboard) focus.requestFocus()
@@ -389,6 +547,11 @@ internal fun String.withCode(code: ErrorCode?): String {
     } ?: this
 }
 
+private fun fadeThrough(): ContentTransform =
+    (fadeIn(tween(durationMillis = FADE_IN_MILLIS, delayMillis = FADE_OUT_MILLIS, easing = LinearEasing)) +
+        scaleIn(initialScale = FADE_THROUGH_ENTER_SCALE))
+        .togetherWith(fadeOut(tween(durationMillis = FADE_OUT_MILLIS, easing = LinearEasing)) + scaleOut(targetScale = FADE_THROUGH_EXIT_SCALE))
+
 private fun AnimatedContentTransitionScope<*>.forwardTransition(motion: MotionScheme, distance: Int) =
     (slideIntoContainer(SlideDirection.Start, motion.defaultSpatialSpec()) { it.sign * distance } + fadeIn(motion.fastEffectsSpec()))
         .togetherWith(slideOutOfContainer(SlideDirection.Start, motion.defaultSpatialSpec()) { it.sign * distance })
@@ -400,3 +563,10 @@ private fun backTransition(motion: MotionScheme) =
 private fun predictiveBackTransition() =
     (fadeIn(tween(easing = PredictiveBackEnterFade)) + scaleIn(tween(easing = PredictiveBackEasing), PREDICTIVE_BACK_ENTER_SCALE))
         .togetherWith(fadeOut(tween(easing = PredictiveBackExitFade)) + scaleOut(tween(easing = PredictiveBackEasing), PREDICTIVE_BACK_EXIT_SCALE))
+
+private fun CoroutineScope.reveal(listState: LazyListState, barState: TopAppBarState) {
+    launch {
+        listState.animateScrollToItem(0)
+        barState.contentOffset = 0f
+    }
+}
