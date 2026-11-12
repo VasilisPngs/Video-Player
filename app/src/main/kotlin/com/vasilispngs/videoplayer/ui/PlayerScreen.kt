@@ -73,11 +73,11 @@ import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
+import androidx.media3.common.text.SubtitleStyle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
-import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.DefaultTrackNameProvider
 import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.SubtitleView
@@ -357,7 +357,7 @@ private fun Subtitles(player: Player) {
         factory = { view },
         modifier = Modifier.fillMaxSize(),
         update = {
-            it.setStyle(CaptionStyleCompat.createFromCaptionStyle(style))
+            it.setStyle(SubtitleStyle.fromCaptionStyle(style))
             it.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * scale)
             it.setCues(cues)
         }
