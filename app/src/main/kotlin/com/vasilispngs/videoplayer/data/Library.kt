@@ -59,8 +59,10 @@ class Library(private val context: Context) {
 
     suspend fun list(folder: Uri): List<Entry> = withContext(Dispatchers.IO) {
         val files = folder.toFile().listFiles() ?: throw IOException(folder.toString())
-        files.filterNot(File::isHidden).map { Entry(it.name, Uri.fromFile(it), kindOf(it.name, it.isDirectory), it.length()) }
-    }.sortedWith(entryOrder)
+        files.filterNot(File::isHidden)
+            .map { Entry(it.name, Uri.fromFile(it), kindOf(it.name, it.isDirectory), it.length()) }
+            .sortedWith(entryOrder)
+    }
 
     suspend fun size(uri: Uri): Long = withContext(Dispatchers.IO) { uri.toFile().length() }
 

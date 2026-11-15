@@ -35,10 +35,11 @@ fun chooseTracks(tracks: Tracks, settings: PlaybackSettings, saved: Playback?): 
     val chosenAudio = saved?.audioTrack?.let { id -> audio.firstOrNull { it.id == id } }
         ?: settings.audioLanguage.code?.let { code -> audio.firstOrNull { it.language == code } }
         ?: audio.firstOrNull()
-    val chosenText = if (saved?.textChosen == true) {
-        saved.textTrack?.let { id -> text.firstOrNull { it.id == id } }
-    } else {
-        when (settings.subtitleLanguage) {
+    val savedText = saved?.textTrack?.let { id -> text.firstOrNull { it.id == id } }
+    val chosenText = when {
+        savedText != null -> savedText
+        saved?.textChosen == true && saved.textTrack == null -> null
+        else -> when (settings.subtitleLanguage) {
             SubtitleLanguage.Off -> null
             SubtitleLanguage.Greek if chosenAudio?.language == GREEK -> text.firstOrNull { it.language == GREEK && it.forced }
             else -> text.filter { it.language == settings.subtitleLanguage.code }.let { matches -> matches.firstOrNull { !it.forced } ?: matches.firstOrNull() }

@@ -99,6 +99,15 @@ class TracksTest {
         assertEquals("t1", choice.text?.id)
     }
 
+    @Test
+    fun `follows the rules again when the remembered subtitles are gone`() {
+        val saved = Playback(uri = "file:///movie.mkv", size = 1, textChosen = true, textTrack = "2")
+
+        val choice = chooseTracks(tracks(audio("0:0", "en"), text("0:2", "en"), text("1:0", "el")), PlaybackSettings(), saved)
+
+        assertEquals("1:0", choice.text?.id)
+    }
+
     private fun tracks(vararg groups: Tracks.Group) = Tracks(groups.toList())
 
     private fun audio(id: String, language: String, supported: Boolean = true) =
