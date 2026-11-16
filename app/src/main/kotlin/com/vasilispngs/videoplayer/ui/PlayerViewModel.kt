@@ -72,6 +72,10 @@ class PlayerViewModel(
         }
         val saved = checkNotNull(memory)
         player.setMediaItem(item, saved.positionMs)
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            .build()
         prepared = true
         player.prepare()
         val tracks = player.tracks()

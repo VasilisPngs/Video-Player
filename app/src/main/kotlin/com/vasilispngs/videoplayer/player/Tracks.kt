@@ -50,6 +50,7 @@ fun chooseTracks(tracks: Tracks, settings: PlaybackSettings, saved: Playback?): 
 
 fun Player.select(choice: TrackChoice) {
     trackSelectionParameters = trackSelectionParameters.buildUpon().apply {
+        setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
         choice.audio?.let { setOverrideForType(it.override()) }
         setTrackTypeDisabled(C.TRACK_TYPE_TEXT, choice.text == null)
         choice.text?.let { setOverrideForType(it.override()) }
