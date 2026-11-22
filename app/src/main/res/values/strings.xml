@@ -16,6 +16,11 @@
     <string name="all_files_access_command" translatable="false">adb shell appops set --uid %1$s MANAGE_EXTERNAL_STORAGE allow</string>
     <string name="folder_empty">Ο φάκελος είναι κενός</string>
     <string name="folder_failed">Δεν ήταν δυνατό το άνοιγμα του φακέλου</string>
+    <string name="delete">Διαγραφή</string>
+    <string name="delete_title">Οριστική διαγραφή;</string>
+    <string name="delete_message">Το %1$s θα διαγραφεί μόνιμα. Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.</string>
+    <string name="delete_message_subtitles">Το %1$s και οι υπότιτλοί του θα διαγραφούν μόνιμα. Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.</string>
+    <string name="delete_failed">Δεν ήταν δυνατή η διαγραφή</string>
     <string name="playback">Αναπαραγωγή</string>
     <string name="audio_language">Γλώσσα ήχου</string>
     <string name="audio_language_first">Πρώτο κανάλι (αρχική γλώσσα)</string>

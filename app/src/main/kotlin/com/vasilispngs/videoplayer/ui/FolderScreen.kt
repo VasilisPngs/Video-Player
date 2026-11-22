@@ -7,40 +7,100 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vasilispngs.videoplayer.R
 import com.vasilispngs.videoplayer.data.Entry
+import com.vasilispngs.videoplayer.data.ErrorCode
 import com.vasilispngs.videoplayer.data.Kind
 import com.vasilispngs.videoplayer.data.Thumbnails
+import com.vasilispngs.videoplayer.player.subtitlesOf
 
 @Composable
 fun FolderScreen(title: String, viewModel: FolderViewModel, thumbnails: Thumbnails, onOpen: (Screen) -> Unit, onBack: () -> Unit) {
     val listing by viewModel.listing.collectAsStateWithLifecycle()
-    FolderContent(title = title, listing = listing, thumbnails = thumbnails, onOpen = onOpen, onBack = onBack)
+    val deleteFailure by viewModel.deleteFailure.collectAsStateWithLifecycle()
+    FolderContent(
+        title = title,
+        listing = listing,
+        deleteFailure = deleteFailure,
+        thumbnails = thumbnails,
+        onOpen = onOpen,
+        onDelete = viewModel::delete,
+        onDeleteFailureShown = viewModel::deleteFailureShown,
+        onBack = onBack
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun FolderContent(title: String, listing: Listing, thumbnails: Thumbnails, onOpen: (Screen) -> Unit, onBack: () -> Unit) {
+internal fun FolderContent(
+    title: String,
+    listing: Listing,
+    deleteFailure: ErrorCode?,
+    thumbnails: Thumbnails,
+    onOpen: (Screen) -> Unit,
+    onDelete: (Entry) -> Unit,
+    onDeleteFailureShown: () -> Unit,
+    onBack: () -> Unit
+) {
     val entries = (listing as? Listing.Loaded)?.entries
     val focus = rememberInitialFocus(!entries.isNullOrEmpty())
     val listState = rememberLazyListState()
     val thumbnailSize = rememberThumbnailSize()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val focusManager = LocalFocusManager.current
+    val motion = MaterialTheme.motionScheme
+    var deleting by rememberSaveable { mutableStateOf<String?>(null) }
 
-    ListScreen(title = title, focus = focus, onBack = onBack) { contentPadding, nestedScroll ->
+    deleteFailure?.let { code ->
+        val message = stringResource(R.string.delete_failed).withCode(code)
+        LaunchedEffect(code, message) {
+            snackbarHostState.showSnackbar(message)
+            onDeleteFailureShown()
+        }
+    }
+
+    entries?.firstOrNull { it.uri.toString() == deleting }?.let { video ->
+        DeleteDialog(
+            name = video.name,
+            subtitles = entries.subtitlesOf(video.name).isNotEmpty(),
+            onDismiss = { deleting = null },
+            onDelete = {
+                deleting = null
+                val _ = focusManager.moveFocus(FocusDirection.Down) || focusManager.moveFocus(FocusDirection.Up)
+                onDelete(video)
+            }
+        )
+    }
+
+    ListScreen(title = title, focus = focus, onBack = onBack, snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { contentPadding, nestedScroll ->
         when (val current = listing) {
             Listing.Loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 LoadingIndicator()
@@ -72,7 +132,17 @@ internal fun FolderContent(title: String, listing: Listing, thumbnails: Thumbnai
                                 { onOpen(Screen.Player(entry.uri.toString())) }
                             }
                             Kind.File -> null
-                        }
+                        },
+                        onLongClick = if (entry.kind == Kind.Video) {
+                            { deleting = entry.uri.toString() }
+                        } else {
+                            null
+                        },
+                        modifier = Modifier.animateItem(
+                            fadeInSpec = motion.defaultEffectsSpec(),
+                            placementSpec = motion.defaultSpatialSpec(),
+                            fadeOutSpec = motion.defaultEffectsSpec()
+                        )
                     )
                 }
             }
@@ -81,7 +151,16 @@ internal fun FolderContent(title: String, listing: Listing, thumbnails: Thumbnai
 }
 
 @Composable
-private fun EntryItem(entry: Entry, index: Int, count: Int, thumbnails: Thumbnails, thumbnailSize: Size, onClick: (() -> Unit)?) {
+private fun EntryItem(
+    entry: Entry,
+    index: Int,
+    count: Int,
+    thumbnails: Thumbnails,
+    thumbnailSize: Size,
+    onClick: (() -> Unit)?,
+    onLongClick: (() -> Unit)?,
+    modifier: Modifier
+) {
     val leading = @Composable {
         Thumbnail(
             video = entry.uri.takeIf { entry.kind == Kind.Video },
@@ -99,16 +178,42 @@ private fun EntryItem(entry: Entry, index: Int, count: Int, thumbnails: Thumbnai
         SegmentedListItem(
             onClick = onClick,
             shapes = ListItemDefaults.segmentedShapes(index, count),
+            modifier = modifier,
             colors = listItemColors(),
             leadingContent = leading,
+            onLongClick = onLongClick,
+            onLongClickLabel = onLongClick?.let { stringResource(R.string.delete) },
             content = name
         )
     } else {
         SegmentedListItem(
             shapes = ListItemDefaults.segmentedShapes(index, count),
+            modifier = modifier,
             colors = listItemColors(),
             leadingContent = leading,
             content = name
         )
     }
+}
+
+@Composable
+private fun DeleteDialog(name: String, subtitles: Boolean, onDismiss: () -> Unit, onDelete: () -> Unit) {
+    val focus = rememberInitialFocus()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDelete, shapes = ButtonDefaults.shapes()) {
+                Text(text = stringResource(R.string.delete))
+            }
+        },
+        modifier = Modifier.onPreviewKeyEvent { it.nativeKeyEvent.repeatCount > 0 },
+        dismissButton = {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes(), modifier = Modifier.focusRequester(focus)) {
+                Text(text = stringResource(R.string.cancel))
+            }
+        },
+        title = { Text(text = stringResource(R.string.delete_title)) },
+        text = { Text(text = stringResource(if (subtitles) R.string.delete_message_subtitles else R.string.delete_message, name)) },
+        properties = dialogProperties()
+    )
 }

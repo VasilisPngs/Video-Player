@@ -3,6 +3,7 @@ package com.vasilispngs.videoplayer.data
 import android.net.Uri
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -54,6 +55,16 @@ class LibraryTest {
 
         assertEquals(listOf("Extras", "Movie 2.el.srt", "Movie 2.mkv", "Movie 2.nfo", "Movie 10.mkv"), entries.map(Entry::name))
         assertEquals(listOf(Kind.Folder, Kind.File, Kind.Video, Kind.File, Kind.Video), entries.map(Entry::kind))
+    }
+
+    @Test
+    fun `deletes a file from the drive and accepts one that is already gone`() = runTest {
+        val video = folder.newFile("Movie.mkv")
+
+        library.delete(Uri.fromFile(video))
+        library.delete(Uri.fromFile(video))
+
+        assertFalse(video.exists())
     }
 
     @Test

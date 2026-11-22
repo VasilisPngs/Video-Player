@@ -3,6 +3,7 @@ package com.vasilispngs.videoplayer.player
 import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
+import com.vasilispngs.videoplayer.data.Entry
 import com.vasilispngs.videoplayer.data.Library
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -59,6 +60,20 @@ class ExternalSubtitlesTest {
 
         assertEquals(setOf("Blade.Runner.el.srt"), first)
         assertEquals(setOf("Blade.Runner.Final.Cut.el.srt", "Blade.Runner.Final.Cut.srt"), second)
+    }
+
+    @Test
+    fun `picks only the subtitle files of a video to delete with it`() = runTest {
+        write("Movie.mkv", "")
+        write("Movie.el.srt", GREEK_TEXT)
+        write("Movie.Extended.mkv", "")
+        write("Movie.Extended.srt", ENGLISH_TEXT)
+        write("Movie.nfo", ENGLISH_TEXT)
+        folder.newFolder("Movie.en.srt")
+
+        val subtitles = library.list(Uri.fromFile(folder.root)).subtitlesOf("Movie.mkv")
+
+        assertEquals(listOf("Movie.el.srt"), subtitles.map(Entry::name))
     }
 
     private fun write(name: String, text: String, charset: Charset = Charsets.UTF_8) {

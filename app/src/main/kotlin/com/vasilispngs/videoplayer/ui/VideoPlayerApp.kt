@@ -350,7 +350,7 @@ private fun Library(
                     )
                 }
                 entry<Screen.Folder> { key ->
-                    val folder = viewModel { FolderViewModel(key.uri.toUri(), container.library) }
+                    val folder = viewModel { FolderViewModel(key.uri.toUri(), container.library, container.playback, container.scope) }
                     FolderScreen(title = key.title, viewModel = folder, thumbnails = container.thumbnails, onOpen = open, onBack = goBack)
                 }
             }
@@ -364,6 +364,7 @@ internal fun ListScreen(
     focus: FocusRequester,
     onBack: (() -> Unit)?,
     barState: TopAppBarState = rememberTopAppBarState(),
+    snackbarHost: @Composable () -> Unit = {},
     content: @Composable (contentPadding: PaddingValues, nestedScroll: NestedScrollConnection) -> Unit
 ) {
     val windowInfo = currentWindowAdaptiveInfoV2()
@@ -400,6 +401,7 @@ internal fun ListScreen(
                     scrollBehavior = scrollBehavior
                 )
             },
+            snackbarHost = snackbarHost,
             contentWindowInsets = contentInsets
         ) { padding ->
             content(

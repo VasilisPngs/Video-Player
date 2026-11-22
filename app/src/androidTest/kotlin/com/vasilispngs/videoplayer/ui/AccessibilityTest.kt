@@ -126,7 +126,16 @@ class AccessibilityTest {
     }
 
     private fun showFolder(listing: Listing) = show {
-        FolderContent(title = "SanDisk", listing = listing, thumbnails = thumbnails, onOpen = {}, onBack = {})
+        FolderContent(
+            title = "SanDisk",
+            listing = listing,
+            deleteFailure = null,
+            thumbnails = thumbnails,
+            onOpen = {},
+            onDelete = {},
+            onDeleteFailureShown = {},
+            onBack = {}
+        )
     }
 
     private fun show(content: @Composable () -> Unit) {

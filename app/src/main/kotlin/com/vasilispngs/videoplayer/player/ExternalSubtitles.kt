@@ -22,12 +22,8 @@ private const val SAMPLE_BYTES = 64 * 1024
 
 suspend fun Library.externalSubtitles(video: String, siblings: List<Entry>): List<SubtitleConfiguration> {
     val base = video.substringBeforeLast('.')
-    val longer = siblings.filter { it.kind == Kind.Video }.map { it.name.substringBeforeLast('.') }.filter { it.length > base.length }
-    return siblings.mapNotNull { entry ->
-        val mimeType = SUBTITLE_TYPES[entry.name.substringAfterLast('.', "").lowercase()] ?: return@mapNotNull null
-        val stem = entry.name.substringBeforeLast('.')
-        if (!stem.belongsTo(base) || longer.any(stem::belongsTo)) return@mapNotNull null
-        val tags = stem.substring(base.length).lowercase().split('.').filter(String::isNotEmpty)
+    return siblings.subtitlesOf(video).map { entry ->
+        val tags = entry.name.substringBeforeLast('.').substring(base.length).lowercase().split('.').filter(String::isNotEmpty)
         val language = when {
             tags.any { it in GREEK_TAGS } -> GREEK
             tags.any { it in ENGLISH_TAGS } -> ENGLISH
@@ -37,12 +33,24 @@ suspend fun Library.externalSubtitles(video: String, siblings: List<Entry>): Lis
         SubtitleConfiguration.Builder(entry.uri)
             .setId(entry.name)
             .setLabel(entry.name)
-            .setMimeType(mimeType)
+            .setMimeType(SUBTITLE_TYPES.getValue(entry.extension))
             .setLanguage(language)
             .setSelectionFlags(if (FORCED_TAG in tags) C.SELECTION_FLAG_FORCED else 0)
             .build()
     }
 }
+
+internal fun List<Entry>.subtitlesOf(video: String): List<Entry> {
+    val base = video.substringBeforeLast('.')
+    val longer = filter { it.kind == Kind.Video }.map { it.name.substringBeforeLast('.') }.filter { it.length > base.length }
+    return filter { entry ->
+        val stem = entry.name.substringBeforeLast('.')
+        entry.kind == Kind.File && entry.extension in SUBTITLE_TYPES && stem.belongsTo(base) && longer.none(stem::belongsTo)
+    }
+}
+
+private val Entry.extension: String
+    get() = name.substringAfterLast('.', "").lowercase()
 
 private fun String.belongsTo(base: String) = startsWith(base, ignoreCase = true) && (length == base.length || this[base.length] == '.')
 

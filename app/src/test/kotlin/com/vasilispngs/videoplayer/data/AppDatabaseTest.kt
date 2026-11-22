@@ -42,7 +42,25 @@ class AppDatabaseTest {
         }
     }
 
+    @Test
+    fun `forgets every saved position of a deleted video`() = runTest {
+        val database = AppDatabase.create(context)
+        try {
+            val playback = database.playback()
+            playback.save(Playback(USB_MOVIE, 1, positionMs = 60_000, updatedAt = 3))
+            playback.save(Playback(USB_MOVIE, 2, positionMs = 30_000, updatedAt = 2))
+            playback.save(Playback(USB_EPISODE, 1, positionMs = 10_000, updatedAt = 1))
+
+            playback.forget(USB_MOVIE)
+
+            assertEquals(listOf(USB_EPISODE), playback.inProgress().first().map(Playback::uri))
+        } finally {
+            database.close()
+        }
+    }
+
     private companion object {
         const val USB_MOVIE = "file:///storage/1234-5678/Movie.mkv"
+        const val USB_EPISODE = "file:///storage/1234-5678/Series/S01E01.mkv"
     }
 }

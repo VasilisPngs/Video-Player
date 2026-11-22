@@ -40,6 +40,9 @@ interface PlaybackDao {
 
     @Upsert
     suspend fun save(playback: Playback)
+
+    @Query("DELETE FROM playback WHERE uri = :uri")
+    suspend fun forget(uri: String)
 }
 
 @Database(

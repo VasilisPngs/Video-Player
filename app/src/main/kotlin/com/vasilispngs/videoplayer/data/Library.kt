@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
 
 enum class Kind { Folder, Video, File }
 
@@ -65,6 +66,10 @@ class Library(private val context: Context) {
     }
 
     suspend fun size(uri: Uri): Long = withContext(Dispatchers.IO) { uri.toFile().length() }
+
+    suspend fun delete(uri: Uri) {
+        withContext(Dispatchers.IO) { Files.deleteIfExists(uri.toFile().toPath()) }
+    }
 
     suspend fun head(uri: Uri, bytes: Int): ByteArray = withContext(Dispatchers.IO) {
         uri.toFile().inputStream().use { it.readNBytes(bytes) }
