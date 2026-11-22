@@ -1,5 +1,7 @@
 package com.vasilispngs.videoplayer.player
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.SeekParameters
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -8,6 +10,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
+@OptIn(UnstableApi::class)
 @RunWith(RobolectricTestRunner::class)
 class SkipTest {
     private val player = buildPlayer(RuntimeEnvironment.getApplication(), SubtitleDelay())
