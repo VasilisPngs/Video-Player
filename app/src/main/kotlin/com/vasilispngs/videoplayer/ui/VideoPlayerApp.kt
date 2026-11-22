@@ -3,12 +3,8 @@ package com.vasilispngs.videoplayer.ui
 import android.content.pm.PackageManager
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
-import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -45,12 +41,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FadeThroughNavigationTransitions
+import androidx.compose.material3.HorizontalSharedAxisNavigationTransitions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -124,7 +121,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.serializer
-import kotlin.math.sign
 
 internal val CompactMargin = 16.dp
 internal val ContentMargin = 16.dp
@@ -135,11 +131,6 @@ private val HeaderSpacing = 20.dp
 private val OptionHeight = 56.dp
 internal val TvOverscanHorizontal = 48.dp
 internal val TvOverscanVertical = 27.dp
-private val ForwardSlide = 96.dp
-private const val FADE_OUT_MILLIS = 90
-private const val FADE_IN_MILLIS = 210
-private const val FADE_THROUGH_ENTER_SCALE = 0.8f
-private const val FADE_THROUGH_EXIT_SCALE = 1.05f
 private const val PREDICTIVE_BACK_EXIT_SCALE = 0.9f
 private const val PREDICTIVE_BACK_ENTER_SCALE = 1.1f
 private const val PREDICTIVE_BACK_FADE_THRESHOLD = 0.35f
@@ -200,16 +191,14 @@ fun VideoPlayerApp(viewModel: HomeViewModel, themeMode: ThemeMode, modifier: Mod
     SideEffect(window, navigationBarScrim) { window?.isNavigationBarContrastEnforced = navigationBarScrim }
 
     val goBack: () -> Unit = { backStack.removeLastOrNull() }
-    val motion = MaterialTheme.motionScheme
-    val slide = with(LocalDensity.current) { ForwardSlide.roundToPx() }
 
     NavDisplay(
         backStack = if (playing) listOf(Screen.Home, backStack.last()) else listOf(Screen.Home),
         modifier = modifier,
         onBack = goBack,
         entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
-        transitionSpec = { forwardTransition(motion, slide) },
-        popTransitionSpec = { backTransition(motion) },
+        transitionSpec = { HorizontalSharedAxisNavigationTransitions.forwardTransform() },
+        popTransitionSpec = { HorizontalSharedAxisNavigationTransitions.backwardTransform() },
         predictivePopTransitionSpec = { predictiveBackTransition() },
         entryProvider = entryProvider {
             entry<Screen.Home> {
@@ -282,9 +271,6 @@ private fun Library(
             else -> coroutineScope.reveal(settingsListState, settingsBarState)
         }
     }
-    val motion = MaterialTheme.motionScheme
-    val slide = with(LocalDensity.current) { ForwardSlide.roundToPx() }
-
     NavigationSuiteScaffold(
         navigationItems = {
             TopLevelItems.forEach { (screen, item) ->
@@ -324,8 +310,12 @@ private fun Library(
             backStack = entries,
             onBack = goBack,
             entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
-            transitionSpec = { if (tabSwitch) fadeThrough() else forwardTransition(motion, slide) },
-            popTransitionSpec = { if (tabSwitch) fadeThrough() else backTransition(motion) },
+            transitionSpec = {
+                if (tabSwitch) FadeThroughNavigationTransitions.transform() else HorizontalSharedAxisNavigationTransitions.forwardTransform()
+            },
+            popTransitionSpec = {
+                if (tabSwitch) FadeThroughNavigationTransitions.transform() else HorizontalSharedAxisNavigationTransitions.backwardTransform()
+            },
             predictivePopTransitionSpec = { predictiveBackTransition() },
             entryProvider = entryProvider {
                 entry<Screen.Home> {
@@ -548,19 +538,6 @@ internal fun String.withCode(code: ErrorCode?): String {
         )
     } ?: this
 }
-
-private fun fadeThrough(): ContentTransform =
-    (fadeIn(tween(durationMillis = FADE_IN_MILLIS, delayMillis = FADE_OUT_MILLIS, easing = LinearEasing)) +
-        scaleIn(initialScale = FADE_THROUGH_ENTER_SCALE))
-        .togetherWith(fadeOut(tween(durationMillis = FADE_OUT_MILLIS, easing = LinearEasing)) + scaleOut(targetScale = FADE_THROUGH_EXIT_SCALE))
-
-private fun AnimatedContentTransitionScope<*>.forwardTransition(motion: MotionScheme, distance: Int) =
-    (slideIntoContainer(SlideDirection.Start, motion.defaultSpatialSpec()) { it.sign * distance } + fadeIn(motion.fastEffectsSpec()))
-        .togetherWith(slideOutOfContainer(SlideDirection.Start, motion.defaultSpatialSpec()) { it.sign * distance })
-
-private fun backTransition(motion: MotionScheme) =
-    (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), PREDICTIVE_BACK_ENTER_SCALE))
-        .togetherWith(fadeOut(motion.fastEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), PREDICTIVE_BACK_EXIT_SCALE))
 
 private fun predictiveBackTransition() =
     (fadeIn(tween(easing = PredictiveBackEnterFade)) + scaleIn(tween(easing = PredictiveBackEasing), PREDICTIVE_BACK_ENTER_SCALE))
