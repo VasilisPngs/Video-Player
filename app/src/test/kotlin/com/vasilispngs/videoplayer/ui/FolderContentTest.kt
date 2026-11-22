@@ -82,6 +82,19 @@ class FolderContentTest {
     }
 
     @Test
+    @Config(qualifiers = "w411dp-h891dp")
+    fun `asks before deleting a whole folder held by touch`() {
+        show(listOf(folder("Season 1"), video("Movie.mkv")))
+
+        compose.onNodeWithText("Season 1").performTouchInput { longClick() }
+        compose.onNodeWithText(string(R.string.delete_folder_message, "Season 1")).assertIsDisplayed()
+        compose.onNodeWithText(string(R.string.delete)).performClick()
+
+        assertEquals(listOf("Season 1"), deleted)
+        assertTrue(opened.isEmpty())
+    }
+
+    @Test
     fun `says why a video could not be deleted`() {
         compose.mainClock.autoAdvance = false
         show(listOf(video("Movie.mkv")), failure = ErrorCode.Named("AccessDeniedException"))
@@ -125,6 +138,8 @@ class FolderContentTest {
     private fun video(name: String) = Entry(name, Uri.fromFile(File(DRIVE, name)), Kind.Video, 1)
 
     private fun file(name: String) = Entry(name, Uri.fromFile(File(DRIVE, name)), Kind.File, 1)
+
+    private fun folder(name: String) = Entry(name, Uri.fromFile(File(DRIVE, name)), Kind.Folder, 0)
 
     private fun string(@StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
 

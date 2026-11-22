@@ -17,7 +17,8 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
-import java.nio.file.Files
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
 
 enum class Kind { Folder, Video, File }
 
@@ -67,8 +68,10 @@ class Library(private val context: Context) {
 
     suspend fun size(uri: Uri): Long = withContext(Dispatchers.IO) { uri.toFile().length() }
 
-    suspend fun delete(uri: Uri) {
-        withContext(Dispatchers.IO) { Files.deleteIfExists(uri.toFile().toPath()) }
+    suspend fun delete(uri: Uri) = withContext(Dispatchers.IO) {
+        val target = uri.toFile()
+        target.deleteRecursively()
+        if (target.exists()) throw target.walk().firstOrNull(File::isFile)?.writeFailure() ?: IOException(target.path)
     }
 
     suspend fun head(uri: Uri, bytes: Int): ByteArray = withContext(Dispatchers.IO) {
@@ -80,6 +83,13 @@ class Library(private val context: Context) {
         val root = directory ?: return null
         return Volume(getDescription(context), Uri.fromFile(root))
     }
+}
+
+private fun File.writeFailure(): IOException? = try {
+    FileChannel.open(toPath(), StandardOpenOption.WRITE).close()
+    null
+} catch (exception: IOException) {
+    exception
 }
 
 val Uri.parent: Uri

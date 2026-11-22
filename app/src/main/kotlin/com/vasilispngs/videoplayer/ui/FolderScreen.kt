@@ -87,15 +87,18 @@ internal fun FolderContent(
         }
     }
 
-    entries?.firstOrNull { it.uri.toString() == deleting }?.let { video ->
+    entries?.firstOrNull { it.uri.toString() == deleting }?.let { target ->
         DeleteDialog(
-            name = video.name,
-            subtitles = entries.subtitlesOf(video.name).isNotEmpty(),
+            message = when {
+                target.kind == Kind.Folder -> stringResource(R.string.delete_folder_message, target.name)
+                entries.subtitlesOf(target.name).isNotEmpty() -> stringResource(R.string.delete_message_subtitles, target.name)
+                else -> stringResource(R.string.delete_message, target.name)
+            },
             onDismiss = { deleting = null },
             onDelete = {
                 deleting = null
                 val _ = focusManager.moveFocus(FocusDirection.Down) || focusManager.moveFocus(FocusDirection.Up)
-                onDelete(video)
+                onDelete(target)
             }
         )
     }
@@ -133,10 +136,10 @@ internal fun FolderContent(
                             }
                             Kind.File -> null
                         },
-                        onLongClick = if (entry.kind == Kind.Video) {
-                            { deleting = entry.uri.toString() }
-                        } else {
+                        onLongClick = if (entry.kind == Kind.File) {
                             null
+                        } else {
+                            { deleting = entry.uri.toString() }
                         },
                         modifier = Modifier.animateItem(
                             fadeInSpec = motion.defaultEffectsSpec(),
@@ -197,7 +200,7 @@ private fun EntryItem(
 }
 
 @Composable
-private fun DeleteDialog(name: String, subtitles: Boolean, onDismiss: () -> Unit, onDelete: () -> Unit) {
+private fun DeleteDialog(message: String, onDismiss: () -> Unit, onDelete: () -> Unit) {
     val focus = rememberInitialFocus()
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -213,7 +216,7 @@ private fun DeleteDialog(name: String, subtitles: Boolean, onDismiss: () -> Unit
             }
         },
         title = { Text(text = stringResource(R.string.delete_title)) },
-        text = { Text(text = stringResource(if (subtitles) R.string.delete_message_subtitles else R.string.delete_message, name)) },
+        text = { Text(text = message) },
         properties = dialogProperties()
     )
 }

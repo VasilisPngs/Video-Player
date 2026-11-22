@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vasilispngs.videoplayer.data.Entry
 import com.vasilispngs.videoplayer.data.ErrorCode
+import com.vasilispngs.videoplayer.data.Kind
 import com.vasilispngs.videoplayer.data.Library
 import com.vasilispngs.videoplayer.data.PlaybackDao
 import com.vasilispngs.videoplayer.data.errorCode
@@ -40,10 +41,11 @@ class FolderViewModel(
         viewModelScope.launch { load() }
     }
 
-    fun delete(video: Entry) {
-        val subtitles = (state.value as? Listing.Loaded)?.entries.orEmpty().subtitlesOf(video.name)
+    fun delete(entry: Entry) {
+        val siblings = (state.value as? Listing.Loaded)?.entries.orEmpty()
+        val subtitles = if (entry.kind == Kind.Video) siblings.subtitlesOf(entry.name) else emptyList()
         viewModelScope.launch {
-            appScope.async { remove(video, subtitles) }.await()?.let { failure.value = it }
+            appScope.async { remove(entry, subtitles) }.await()?.let { failure.value = it }
             load()
         }
     }
@@ -52,9 +54,9 @@ class FolderViewModel(
         failure.value = null
     }
 
-    private suspend fun remove(video: Entry, subtitles: List<Entry>): ErrorCode? = try {
-        library.delete(video.uri)
-        playback.forget(video.uri.toString())
+    private suspend fun remove(target: Entry, subtitles: List<Entry>): ErrorCode? = try {
+        library.delete(target.uri)
+        playback.forget(target.uri.toString())
         subtitles.forEach { library.delete(it.uri) }
         null
     } catch (exception: IOException) {

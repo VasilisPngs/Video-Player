@@ -59,8 +59,27 @@ class AppDatabaseTest {
         }
     }
 
+    @Test
+    fun `forgets every video in a deleted folder and nothing beside it`() = runTest {
+        val database = AppDatabase.create(context)
+        try {
+            val playback = database.playback()
+            playback.save(Playback("$SEASON_1/S01E01.mkv", 1, positionMs = 60_000, updatedAt = 3))
+            playback.save(Playback("$SEASON_1/Extras/Making%20of.mkv", 1, positionMs = 30_000, updatedAt = 2))
+            playback.save(Playback("$SEASON_10/S10E01.mkv", 1, positionMs = 10_000, updatedAt = 1))
+
+            playback.forget(SEASON_1)
+
+            assertEquals(listOf("$SEASON_10/S10E01.mkv"), playback.inProgress().first().map(Playback::uri))
+        } finally {
+            database.close()
+        }
+    }
+
     private companion object {
         const val USB_MOVIE = "file:///storage/1234-5678/Movie.mkv"
         const val USB_EPISODE = "file:///storage/1234-5678/Series/S01E01.mkv"
+        const val SEASON_1 = "file:///storage/1234-5678/Series/Season%201"
+        const val SEASON_10 = "file:///storage/1234-5678/Series/Season%2010"
     }
 }

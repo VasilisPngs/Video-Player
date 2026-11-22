@@ -68,16 +68,30 @@ class FolderViewModelTest {
     }
 
     @Test
-    fun `keeps a video it could not delete and says why`() {
-        val stuck = folder.newFolder("Movie.mkv")
-        File(stuck, "Movie.nfo").createNewFile()
+    fun `deletes a whole season and forgets where its videos stopped`() {
+        val season = folder.newFolder("Season 1")
+        listOf("S01E01.mkv", "S01E01.el.srt", "S01E02.mkv").forEach { File(season, it).createNewFile() }
+        folder.newFile("Season 1.srt")
+        val viewModel = viewModel()
+        val entry = await { viewModel.entries()?.firstOrNull { it.kind == Kind.Folder } }
+
+        viewModel.delete(entry)
+
+        val left = await { viewModel.entries()?.takeIf { it.size == 1 } }
+        assertEquals(listOf("Season 1.srt"), left.map(Entry::name))
+        assertEquals(listOf(entry.uri.toString()), forgotten)
+        assertNull(viewModel.deleteFailure.value)
+    }
+
+    @Test
+    fun `keeps a video the system did not delete and says so`() {
         val viewModel = viewModel()
         await { viewModel.entries() }
+        val stuck = File("/proc/self/status")
 
         viewModel.delete(Entry(stuck.name, Uri.fromFile(stuck), Kind.Video, 0))
 
-        val failure = await { viewModel.deleteFailure.value }
-        assertEquals(ErrorCode.Named("DirectoryNotEmptyException"), failure)
+        assertTrue(await { viewModel.deleteFailure.value } is ErrorCode.Named)
         assertTrue(stuck.exists())
         assertTrue(forgotten.isEmpty())
         viewModel.deleteFailureShown()

@@ -20,6 +20,7 @@
     <string name="delete_title">Οριστική διαγραφή;</string>
     <string name="delete_message">Το %1$s θα διαγραφεί μόνιμα. Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.</string>
     <string name="delete_message_subtitles">Το %1$s και οι υπότιτλοί του θα διαγραφούν μόνιμα. Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.</string>
+    <string name="delete_folder_message">Ο φάκελος %1$s και όλα τα περιεχόμενά του θα διαγραφούν μόνιμα. Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.</string>
     <string name="delete_failed">Δεν ήταν δυνατή η διαγραφή</string>
     <string name="playback">Αναπαραγωγή</string>
     <string name="audio_language">Γλώσσα ήχου</string>

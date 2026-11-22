@@ -1,9 +1,11 @@
 package com.vasilispngs.videoplayer.data
 
 import android.net.Uri
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -11,6 +13,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import java.io.File
+import java.io.IOException
 
 @RunWith(RobolectricTestRunner::class)
 class LibraryTest {
@@ -65,6 +68,25 @@ class LibraryTest {
         library.delete(Uri.fromFile(video))
 
         assertFalse(video.exists())
+    }
+
+    @Test
+    fun `deletes a folder with everything in it`() = runTest {
+        val season = folder.newFolder("Season 1")
+        File(season, "S01E01.mkv").createNewFile()
+        File(season, "S01E01.el.srt").createNewFile()
+        File(File(season, "Extras").apply { mkdir() }, "Making of.mkv").createNewFile()
+
+        library.delete(Uri.fromFile(season))
+
+        assertFalse(season.exists())
+    }
+
+    @Test
+    fun `fails when the file is still there after the delete`() {
+        assertThrows(IOException::class.java) {
+            runBlocking { library.delete(Uri.fromFile(File("/proc/self/status"))) }
+        }
     }
 
     @Test
