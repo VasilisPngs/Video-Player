@@ -96,6 +96,7 @@ import com.vasilispngs.videoplayer.data.fileName
 import com.vasilispngs.videoplayer.player.audio
 import com.vasilispngs.videoplayer.player.buildPlayer
 import com.vasilispngs.videoplayer.player.matchFrameRate
+import com.vasilispngs.videoplayer.player.skip
 import com.vasilispngs.videoplayer.player.text
 import com.vasilispngs.videoplayer.ui.theme.VideoPlayerTheme
 import kotlinx.coroutines.CompletableDeferred
@@ -215,8 +216,6 @@ private fun PlayerContent(
             .focusRequester(root)
             .focusable()
             .onKeyEvent { event ->
-                val seek = event.key == Key.DirectionLeft || event.key == Key.DirectionRight
-                if (event.type == KeyEventType.KeyUp && seek) player.isScrubbingModeEnabled = false
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 interactions++
                 if (!rootFocused) return@onKeyEvent false
@@ -226,8 +225,7 @@ private fun PlayerContent(
                         controls = !player.playWhenReady
                     }
                     Key.DirectionLeft, Key.DirectionRight -> {
-                        if (event.nativeKeyEvent.repeatCount > 0) player.isScrubbingModeEnabled = true
-                        if (event.key == Key.DirectionLeft) player.seekBack() else player.seekForward()
+                        player.skip(forward = event.key == Key.DirectionRight)
                         controls = true
                     }
                     Key.DirectionUp, Key.DirectionDown -> {
@@ -366,7 +364,7 @@ private fun Subtitles(player: Player) {
 
 @Composable
 private fun BoxScope.Controls(
-    player: Player,
+    player: ExoPlayer,
     title: String,
     playing: Boolean,
     playFocus: FocusRequester,
@@ -401,7 +399,7 @@ private fun BoxScope.Controls(
                 horizontalArrangement = Arrangement.spacedBy(ContentMargin),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ControlButton(icon = R.drawable.ic_replay_10, label = R.string.rewind, onClick = player::seekBack)
+                ControlButton(icon = R.drawable.ic_replay_10, label = R.string.rewind, onClick = { player.skip(forward = false) })
                 FilledIconButton(
                     onClick = playPause::onClick,
                     shapes = IconButtonDefaults.shapes(IconButtonDefaults.mediumRoundShape, IconButtonDefaults.mediumPressedShape),
@@ -416,7 +414,7 @@ private fun BoxScope.Controls(
                         modifier = Modifier.size(IconButtonDefaults.mediumIconSize)
                     )
                 }
-                ControlButton(icon = R.drawable.ic_forward_10, label = R.string.fast_forward, onClick = player::seekForward)
+                ControlButton(icon = R.drawable.ic_forward_10, label = R.string.fast_forward, onClick = { player.skip(forward = true) })
             }
             Row(modifier = Modifier.align(Alignment.CenterEnd), horizontalArrangement = Arrangement.spacedBy(SmallSpacing)) {
                 ControlButton(icon = R.drawable.ic_audiotrack, label = R.string.audio, onClick = onAudio)
