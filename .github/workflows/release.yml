@@ -50,16 +50,18 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Find Media3 version
+      - name: Find Media3 version and FFmpeg revision
         id: media3
-        run: echo "version=$(grep -oP '^media3 = "\K[^"]+' gradle/libs.versions.toml)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(grep -oP '^media3 = "\K[^"]+' gradle/libs.versions.toml)" >> "$GITHUB_OUTPUT"
+          echo "ffmpeg=$(git ls-remote --exit-code https://github.com/FFmpeg/FFmpeg.git "refs/heads/$FFMPEG_BRANCH" | cut -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Restore FFmpeg audio decoders
         id: ffmpeg
         uses: actions/cache/restore@v6
         with:
           path: app/libs
-          key: ffmpeg-${{ steps.media3.outputs.version }}-${{ env.FFMPEG_BRANCH }}-${{ env.NDK_VERSION }}-${{ env.CMAKE_VERSION }}-${{ env.MEDIA3_JAVA_VERSION }}-${{ hashFiles('.github/scripts/build-ffmpeg.sh') }}-${{ env.FFMPEG_DECODERS }}
+          key: ffmpeg-${{ steps.media3.outputs.version }}-${{ env.FFMPEG_BRANCH }}-${{ steps.media3.outputs.ffmpeg }}-${{ env.NDK_VERSION }}-${{ env.CMAKE_VERSION }}-${{ env.MEDIA3_JAVA_VERSION }}-${{ hashFiles('.github/scripts/build-ffmpeg.sh') }}-${{ env.FFMPEG_DECODERS }}
 
       - name: Build FFmpeg audio decoders
         if: steps.ffmpeg.outputs.cache-hit != 'true'
