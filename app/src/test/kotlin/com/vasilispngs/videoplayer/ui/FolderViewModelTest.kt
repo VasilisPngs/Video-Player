@@ -98,6 +98,27 @@ class FolderViewModelTest {
         assertNull(viewModel.deleteFailure.value)
     }
 
+    @Test
+    fun `forgets videos already deleted from a folder when a remaining file cannot be removed`() {
+        val season = folder.newFolder("Season 1")
+        val deletedEpisode = File(season, "S01E01.mkv").apply { createNewFile() }
+        val lockedDir = File(season, "locked").apply { mkdir() }
+        val remainingEpisode = File(lockedDir, "S01E02.mkv").apply { createNewFile() }
+        lockedDir.setWritable(false)
+        try {
+            val viewModel = viewModel()
+            val entry = await { viewModel.entries()?.firstOrNull { it.kind == Kind.Folder } }
+
+            viewModel.delete(entry)
+
+            assertTrue(await { viewModel.deleteFailure.value } is ErrorCode.Named)
+            assertEquals(listOf(Uri.fromFile(deletedEpisode).toString()), forgotten)
+            assertTrue(remainingEpisode.exists())
+        } finally {
+            lockedDir.setWritable(true)
+        }
+    }
+
     private fun viewModel() = FolderViewModel(Uri.fromFile(folder.root), Library(RuntimeEnvironment.getApplication()), playback, appScope)
 
     private fun FolderViewModel.entries() = (listing.value as? Listing.Loaded)?.entries

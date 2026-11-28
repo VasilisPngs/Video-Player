@@ -68,10 +68,18 @@ class Library(private val context: Context) {
 
     suspend fun size(uri: Uri): Long = withContext(Dispatchers.IO) { uri.toFile().length() }
 
-    suspend fun delete(uri: Uri) = withContext(Dispatchers.IO) {
+    suspend fun delete(uri: Uri, onDeleted: suspend (Uri) -> Unit = {}) = withContext(Dispatchers.IO) {
         val target = uri.toFile()
+        val videos = if (target.isDirectory) {
+            target.walk().filter { it.isFile && kindOf(it.name, directory = false) == Kind.Video }.toList()
+        } else {
+            emptyList()
+        }
         target.deleteRecursively()
-        if (target.exists()) throw target.walk().firstOrNull(File::isFile)?.writeFailure() ?: IOException(target.path)
+        if (target.exists()) {
+            videos.filterNot(File::exists).forEach { onDeleted(Uri.fromFile(it)) }
+            throw target.walk().firstOrNull(File::isFile)?.writeFailure() ?: IOException(target.path)
+        }
     }
 
     suspend fun head(uri: Uri, bytes: Int): ByteArray = withContext(Dispatchers.IO) {

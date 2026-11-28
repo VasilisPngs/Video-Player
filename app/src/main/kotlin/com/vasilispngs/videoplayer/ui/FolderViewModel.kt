@@ -55,7 +55,7 @@ class FolderViewModel(
     }
 
     private suspend fun remove(target: Entry, subtitles: List<Entry>): ErrorCode? = try {
-        library.delete(target.uri)
+        library.delete(target.uri) { deleted -> playback.forget(deleted.toString()) }
         playback.forget(target.uri.toString())
         subtitles.forEach { library.delete(it.uri) }
         null

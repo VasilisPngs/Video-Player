@@ -176,7 +176,10 @@ private fun PlayerContent(
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState != Player.STATE_ENDED) return
+                if (playbackState != Player.STATE_ENDED) {
+                    next = null
+                    return
+                }
                 val upcoming = viewModel.next
                 if (upcoming != null) next = upcoming else exit()
             }
@@ -274,6 +277,7 @@ private fun PlayerContent(
             NextVideo(
                 name = upcoming.fileName,
                 onPlay = {
+                    viewModel.stop(player)
                     player.stop()
                     onNext(upcoming)
                 },

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import com.vasilispngs.videoplayer.data.AppPreferences
@@ -79,8 +80,10 @@ class PlayerViewModel(
         prepared = true
         player.prepare()
         val tracks = player.tracks()
-        player.select(chooseTracks(tracks, preferences.playback.first(), saved))
-        tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO }?.let { matchFrameRate(it.getTrackFormat(0).frameRate) }
+        if (!tracks.isEmpty) {
+            player.select(chooseTracks(tracks, preferences.playback.first(), saved))
+            tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO }?.let { matchFrameRate(it.getTrackFormat(0).frameRate) }
+        }
         player.playWhenReady = autoplay
     }
 
@@ -88,6 +91,7 @@ class PlayerViewModel(
         autoplay = false
         val saved = memory ?: return
         if (!prepared) return
+        prepared = false
         val duration = player.duration.takeIf { it != C.TIME_UNSET } ?: saved.durationMs
         val position = player.currentPosition
         val finished = player.playbackState == Player.STATE_ENDED || (duration > 0 && position >= duration * FINISHED_FRACTION)
@@ -135,12 +139,17 @@ class PlayerViewModel(
 }
 
 private suspend fun Player.tracks(): Tracks = callbackFlow {
-    val listener = object : Player.Listener {
-        override fun onTracksChanged(tracks: Tracks) {
-            trySend(tracks)
+    fun publish() {
+        if (!currentTracks.isEmpty || playbackState == Player.STATE_ENDED || playerError != null) {
+            val _ = trySend(currentTracks)
         }
     }
+    val listener = object : Player.Listener {
+        override fun onTracksChanged(tracks: Tracks) = publish()
+        override fun onPlaybackStateChanged(playbackState: Int) = publish()
+        override fun onPlayerError(error: PlaybackException) = publish()
+    }
     addListener(listener)
-    trySend(currentTracks)
+    publish()
     awaitClose { removeListener(listener) }
-}.first { !it.isEmpty }
+}.first()

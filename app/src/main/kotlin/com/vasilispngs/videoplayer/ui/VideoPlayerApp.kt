@@ -218,7 +218,11 @@ fun VideoPlayerApp(viewModel: HomeViewModel, themeMode: ThemeMode, modifier: Mod
                 PlayerScreen(
                     viewModel = player,
                     onExit = goBack,
-                    onNext = { next -> backStack[backStack.lastIndex] = Screen.Player(next.toString()) }
+                    onNext = { next ->
+                        if (backStack.lastOrNull() is Screen.Player) {
+                            backStack[backStack.lastIndex] = Screen.Player(next.toString())
+                        }
+                    }
                 )
             }
         }
@@ -480,24 +484,36 @@ internal fun <T> OptionDialog(
     onSelect: (T) -> Unit,
     extraButton: (@Composable () -> Unit)? = null
 ) {
-    val focus = rememberInitialFocus()
+    val parentInput = LocalInputModeManager.current
+    val focus = remember { FocusRequester() }
+    val focusedIndex = options.indexOf(current).takeIf { it >= 0 } ?: 0
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
+            val dialogInput = LocalInputModeManager.current
+            TextButton(
+                onClick = onDismiss,
+                shapes = ButtonDefaults.shapes(),
+                modifier = if (options.isEmpty()) Modifier.focusRequester(focus) else Modifier
+            ) {
                 Text(text = stringResource(R.string.cancel))
+            }
+            LaunchedEffect(Unit) {
+                if (parentInput.inputMode == InputMode.Keyboard || dialogInput.inputMode == InputMode.Keyboard) {
+                    focus.requestFocus()
+                }
             }
         },
         dismissButton = extraButton,
         title = { Text(text = title) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()).selectableGroup()) {
-                options.forEach { option ->
+                options.forEachIndexed { index, option ->
                     val selected = option == current
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .then(if (selected) Modifier.focusRequester(focus) else Modifier)
+                            .then(if (index == focusedIndex) Modifier.focusRequester(focus) else Modifier)
                             .height(OptionHeight)
                             .selectable(selected = selected, onClick = { onSelect(option) }, role = Role.RadioButton),
                         horizontalArrangement = Arrangement.spacedBy(ContentMargin),
